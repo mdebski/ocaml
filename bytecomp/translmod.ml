@@ -401,6 +401,8 @@ let rec transl_module cc rootpath mexp =
                     ap_specialised=Default_specialise})
       | Tmod_constraint(arg, _, _, ccarg) ->
           transl_module (compose_coercions cc ccarg) rootpath arg
+      | Tmod_tconstraint(arg, _, ccarg) ->
+          transl_module (compose_coercions cc ccarg) rootpath arg
       | Tmod_unpack(arg, _) ->
           apply_coercion loc Strict cc (Translcore.transl_exp arg)
 

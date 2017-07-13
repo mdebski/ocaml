@@ -410,6 +410,8 @@ and add_module bv modl =
       add_module bv mod1; add_module bv mod2
   | Pmod_constraint(modl, mty) ->
       add_module bv modl; add_modtype bv mty
+  | Pmod_tconstraint(modl, mty) ->
+      add_module bv modl; add_modtype bv mty
   | Pmod_unpack(e) ->
       add_expr bv e
   | Pmod_extension e ->

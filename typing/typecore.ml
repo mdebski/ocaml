@@ -191,6 +191,7 @@ let iter_expression f e =
     | Pmod_ident _ -> ()
     | Pmod_structure str -> List.iter structure_item str
     | Pmod_constraint (me, _)
+    | Pmod_tconstraint (me, _)
     | Pmod_functor (_, _, me) -> module_expr me
     | Pmod_apply (me1, me2) -> module_expr me1; module_expr me2
     | Pmod_unpack e -> expr e
@@ -1638,6 +1639,7 @@ and is_nonexpansive_mod mexp =
   | Tmod_functor _ -> true
   | Tmod_unpack (e, _) -> is_nonexpansive e
   | Tmod_constraint (m, _, _, _) -> is_nonexpansive_mod m
+  | Tmod_tconstraint (m, _, _) -> is_nonexpansive_mod m
   | Tmod_structure str ->
       List.for_all
         (fun item -> match item.str_desc with

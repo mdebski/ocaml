@@ -871,6 +871,7 @@ module Analyser =
       match mod_expr.Typedtree.mod_desc with
         Typedtree.Tmod_ident (p,_) -> Name.from_path p
       | Typedtree.Tmod_constraint (m_exp, _, _, _) -> tt_name_from_module_expr m_exp
+      | Typedtree.Tmod_tconstraint (m_exp, _, _) -> tt_name_from_module_expr m_exp
       | Typedtree.Tmod_structure _
       | Typedtree.Tmod_functor _
       | Typedtree.Tmod_apply _
@@ -1671,7 +1672,8 @@ module Analyser =
       in
       let m_code_intf =
         match p_module_expr.Parsetree.pmod_desc with
-          Parsetree.Pmod_constraint (_, pmodule_type) ->
+        (* TODO mdebski: we should probably handle tconstraint in odoc somehow *)
+        | Parsetree.Pmod_constraint (_, pmodule_type) ->
             let loc_start = pmodule_type.Parsetree.pmty_loc.Location.loc_start.Lexing.pos_cnum in
             let loc_end = pmodule_type.Parsetree.pmty_loc.Location.loc_end.Lexing.pos_cnum in
             Some (get_string_of_file loc_start loc_end)
