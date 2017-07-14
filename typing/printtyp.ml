@@ -1233,8 +1233,10 @@ let rec tree_of_modtype ?(ellipsis=false) = function
       in
       Omty_functor (Ident.name param,
                     may_map (tree_of_modtype ~ellipsis:false) ty_arg, res)
-  | Mty_alias(_, p) ->
-      Omty_alias (tree_of_path p)
+  | Mty_alias(_, p, None) ->
+      Omty_alias (tree_of_path p, None)
+  | Mty_alias(_, p, Some mty) ->
+      Omty_alias (tree_of_path p, Some (tree_of_modtype mty))
 
 and tree_of_signature sg =
   wrap_env (fun env -> env) (tree_of_signature_rec !printing_env false) sg
