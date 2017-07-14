@@ -229,7 +229,7 @@ let rec modtypes ~loc env cxt subst mty1 mty2 =
 
 and try_modtypes ~loc env cxt subst mty1 mty2 =
   match (mty1, mty2) with
-  | (Mty_alias(pres1, p1, None), Mty_alias(pres2, p2, None)) -> begin
+  | (Mty_alias(pres1, p1, omty1), Mty_alias(pres2, p2, omty2)) -> begin
       if Env.is_functor_arg p2 env then
         raise (Error[cxt, env, Invalid_module_alias p2]);
       if not (Path.same p1 p2) then begin
@@ -237,6 +237,11 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         and p2 = Env.normalize_path None env (Subst.module_path subst p2) in
         if not (Path.same p1 p2) then raise Dont_match
       end;
+      match omty1, omty2 with
+      | None, Some restr -> modtypes ~loc env cxt subst mty1 restr
+      | Some restr1, Some restr2 -> modtypes ~loc env cxt subst restr1 restr2
+      | _ -> ()
+      ;
       match pres1, pres2 with
       | Mta_present, Mta_present -> Tcoerce_none
         (* Should really be Tcoerce_ignore if it existed *)
@@ -251,7 +256,6 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         in
         Tcoerce_alias (p1, Tcoerce_none)
     end
-  | (Mty_alias(_, _, _), Mty_alias(_, _, _)) -> failwith "try_modtypes NYI 1."
   | (Mty_alias(pres1, p1, None), _) -> begin
       let p1 = try
         Env.normalize_path (Some Location.none) env p1
