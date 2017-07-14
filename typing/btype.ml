@@ -209,7 +209,7 @@ let proxy ty =
 
 (**** Utilities for fixed row private types ****)
 
-let row_of_type t = 
+let row_of_type t =
   match (repr t).desc with
     Tobject(t,_) ->
       let rec get_row t =
@@ -357,7 +357,10 @@ let type_iterators =
     it.it_path ctd.clty_path
   and it_module_type it = function
       Mty_ident p
-    | Mty_alias(_, p) -> it.it_path p
+    | Mty_alias(_, p, None) -> it.it_path p
+    | Mty_alias(_, p, Some mty) ->
+      it.it_path p;
+      it.it_module_type it mty
     | Mty_signature sg -> it.it_signature it sg
     | Mty_functor (_, mto, mt) ->
         may (it.it_module_type it) mto;

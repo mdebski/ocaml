@@ -69,14 +69,14 @@ let rec path_concat head p =
 let extract_sig env loc mty =
   match Env.scrape_alias env mty with
     Mty_signature sg -> sg
-  | Mty_alias(_, path) ->
+  | Mty_alias(_, path, _) ->
       raise(Error(loc, env, Cannot_scrape_alias path))
   | _ -> raise(Error(loc, env, Signature_expected))
 
 let extract_sig_open env loc mty =
   match Env.scrape_alias env mty with
     Mty_signature sg -> sg
-  | Mty_alias(_, path) ->
+  | Mty_alias(_, path, _) ->
       raise(Error(loc, env, Cannot_scrape_alias path))
   | mty -> raise(Error(loc, env, Structure_expected mty))
 
@@ -337,7 +337,7 @@ let rec approx_modtype env smty =
       Mty_ident path
   | Pmty_alias lid ->
       let path = Typetexp.lookup_module env smty.pmty_loc lid.txt in
-      Mty_alias(Mta_absent, path)
+      Mty_alias(Mta_absent, path, None)
   | Pmty_signature ssg ->
       Mty_signature(approx_sig env ssg)
   | Pmty_functor(param, sarg, sres) ->
@@ -539,7 +539,7 @@ let rec transl_modtype env smty =
         smty.pmty_attributes
   | Pmty_alias lid ->
       let path = transl_module_alias loc env lid.txt in
-      mkmty (Tmty_alias (path, lid)) (Mty_alias(Mta_absent, path)) env loc
+      mkmty (Tmty_alias (path, lid)) (Mty_alias(Mta_absent, path, None)) env loc
         smty.pmty_attributes
   | Pmty_signature ssg ->
       let sg = transl_signature env ssg in
@@ -1073,7 +1073,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
       let path =
         Typetexp.lookup_module ~load:(not alias) env smod.pmod_loc lid.txt in
       let md = { mod_desc = Tmod_ident (path, lid);
-                 mod_type = Mty_alias(Mta_absent, path);
+                 mod_type = Mty_alias(Mta_absent, path, None);
                  mod_env = env;
                  mod_attributes = smod.pmod_attributes;
                  mod_loc = smod.pmod_loc } in
@@ -1165,7 +1165,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
                mod_env = env;
                mod_attributes = smod.pmod_attributes;
                mod_loc = smod.pmod_loc }
-      | Mty_alias(_, path) ->
+      | Mty_alias(_, path, _) ->
           raise(Error(sfunct.pmod_loc, env, Cannot_scrape_alias path))
       | _ ->
           raise(Error(sfunct.pmod_loc, env, Cannot_apply funct.mod_type))
