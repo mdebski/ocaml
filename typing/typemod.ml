@@ -1082,7 +1082,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         if alias && aliasable then
           (Env.add_required_global (Path.head path); md)
         else match (Env.find_module path env).md_type with
-          Mty_alias(_, p1) when not alias ->
+        | Mty_alias(_, p1, None) when not alias ->
             let p1 = Env.normalize_path (Some smod.pmod_loc) env p1 in
             let mty = Includemod.expand_module_alias env [] p1 in
             { md with
@@ -1091,6 +1091,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
               mod_type =
                 if sttn then Mtype.strengthen ~aliasable:true env mty p1
                 else mty }
+        | Mty_alias(_, _p1, _) -> failwith "typemod NYI 1."
         | mty ->
             let mty =
               if sttn then Mtype.strengthen ~aliasable env mty path
@@ -1177,7 +1178,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           mod_loc = smod.pmod_loc;
           mod_attributes = smod.pmod_attributes;
          }
-
+  | Pmod_tconstraint(_sarg, _smty) -> failwith "typemod tconstraint NYI."
   | Pmod_unpack sexp ->
       if !Clflags.principal then Ctype.begin_def ();
       let exp = Typecore.type_exp env sexp in

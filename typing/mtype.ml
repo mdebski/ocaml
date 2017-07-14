@@ -354,8 +354,9 @@ let collect_arg_paths mty =
   and it_signature_item it si =
     type_iterators.it_signature_item it si;
     match si with
-      Sig_module (id, {md_type=Mty_alias(_, p)}, _) ->
+      Sig_module (id, {md_type=Mty_alias(_, p, None)}, _) ->
         bindings := Ident.add id p !bindings
+    | Sig_module (_, {md_type=Mty_alias(_, _, _)}, _) -> failwith "collect_arg_paths NYI."
     | Sig_module (id, {md_type=Mty_signature sg}, _) ->
         List.iter
           (function Sig_module (id', _, _) ->

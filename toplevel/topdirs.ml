@@ -575,7 +575,8 @@ let () =
            Sig_module (id, {md with md_type = trim_signature md.md_type},
                        Trec_not) :: acc in
          match md.md_type with
-         | Mty_alias(_, path) -> accum_aliases path acc
+         | Mty_alias(_, path, None) -> accum_aliases path acc
+         | Mty_alias(_, _path, _) -> failwith "#show_module NYI."
          | Mty_ident _ | Mty_signature _ | Mty_functor _ ->
              List.rev acc
        in
