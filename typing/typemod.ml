@@ -1178,7 +1178,25 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           mod_loc = smod.pmod_loc;
           mod_attributes = smod.pmod_attributes;
          }
-  | Pmod_tconstraint(_sarg, _smty) -> failwith "typemod tconstraint NYI."
+  | Pmod_tconstraint(sarg, smty) ->
+      let arg = type_module ~alias true funct_body anchor env sarg in
+      let mty = transl_modtype env smty in
+      let coercion =
+        try
+          Includemod.modtypes ~loc:arg.mod_loc env arg.mod_type mty.mty_type
+        with Includemod.Error msg ->
+          raise(Error(arg.mod_loc, env, Not_included msg))
+      in begin
+        match arg.mod_desc with
+        | Tmod_ident (path, _) ->
+          { mod_desc = Tmod_tconstraint(arg, mty, coercion);
+            mod_type = Mty_alias (Mta_present, path, Some mty.mty_type);
+            mod_env = env;
+            mod_loc = smod.pmod_loc;
+            mod_attributes = smod.pmod_attributes;
+          }
+        | _ -> failwith "NYI left-hand side not an ident in Pmod_tconstraint"
+      end
   | Pmod_unpack sexp ->
       if !Clflags.principal then Ctype.begin_def ();
       let exp = Typecore.type_exp env sexp in
