@@ -102,7 +102,7 @@ and strengthen_sig ~aliasable env sg p pos =
 and strengthen_decl ~aliasable env md p =
   match md.md_type with
   | Mty_alias _ -> md
-  | _ when aliasable -> {md with md_type = Mty_alias(Mta_present, p)}
+  | _ when aliasable -> {md with md_type = Mty_alias(Mta_present, p, None)}
   | mty -> {md with md_type = strengthen ~aliasable env mty p}
 
 let () = Env.strengthen := strengthen
