@@ -1428,14 +1428,14 @@ let iter_env_cont = ref []
 
 let rec scrape_alias_for_visit env mty =
   match mty with
-  | Mty_alias(_, Pident id, None)
+  (* TODO mdebski: verify if it's fine to ignore restriction *)
+  | Mty_alias(_, Pident id, _)
     when Ident.persistent id
       && not (Hashtbl.mem persistent_structures (Ident.name id)) -> false
-  | Mty_alias(_, path, None) -> (* PR#6600: find_module may raise Not_found *)
+  | Mty_alias(_, path, _) -> (* PR#6600: find_module may raise Not_found *)
       begin try scrape_alias_for_visit env (find_module path env).md_type
       with Not_found -> false
       end
-  | Mty_alias(_, _, _) -> failwith "env NYI scrape_alias_for_visit"
   | _ -> true
 
 let iter_env proj1 proj2 f env () =
