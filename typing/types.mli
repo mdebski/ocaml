@@ -404,7 +404,7 @@ type module_type =
     Mty_ident of Path.t
   | Mty_signature of signature
   | Mty_functor of Ident.t * module_type option * module_type
-  | Mty_alias of alias_presence * Path.t
+  | Mty_alias of alias_presence * Path.t * module_type option
 
 and alias_presence =
   | Mta_present
