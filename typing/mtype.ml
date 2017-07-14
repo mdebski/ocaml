@@ -121,10 +121,12 @@ let nondep_supertype env mid mty =
         if Path.isfree mid p then
           nondep_mty env va (Env.find_modtype_expansion p env)
         else mty
-    | Mty_alias(_, p) ->
+    | Mty_alias(_, p, None) ->
         if Path.isfree mid p then
           nondep_mty env va (Env.find_module p env).md_type
         else mty
+    | Mty_alias(_, _, Some mty) ->
+      nondep_mty env va mty
     | Mty_signature sg ->
         Mty_signature(nondep_sig env va sg)
     | Mty_functor(param, arg, res) ->
@@ -238,8 +240,9 @@ let rec no_code_needed env mty =
     Mty_ident _ -> false
   | Mty_signature sg -> no_code_needed_sig env sg
   | Mty_functor(_, _, _) -> false
-  | Mty_alias(Mta_absent, _) -> true
-  | Mty_alias(Mta_present, _) -> false
+  | Mty_alias(Mta_absent, _, None) -> true
+  | Mty_alias(Mta_absent, _, Some mty) -> no_code_needed env mty
+  | Mty_alias(Mta_present, _, _) -> false
 
 and no_code_needed_sig env sg =
   match sg with
