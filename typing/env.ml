@@ -1023,7 +1023,7 @@ let rec normalize_path lax env path =
     | _ -> path
   in
   try match find_module ~alias:true path env with
-    {md_type=Mty_alias(_, path1)} ->
+    {md_type=Mty_alias(_, path1, _)} ->
       let path' = normalize_path lax env path1 in
       if lax || !Clflags.transparent_modules then path' else
       let id = Path.head path in
