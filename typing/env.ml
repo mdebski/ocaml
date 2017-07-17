@@ -1571,38 +1571,32 @@ let add_gadt_instance_chain env lv t =
 (* Expand manifest module type names at the top of the given module type *)
 
 let rec scrape_alias env ?path ?constr mty =
-  match mty, path with
-    Mty_ident p, _ ->
-      begin try
-        scrape_alias env (find_modtype_expansion p env) ?path ?constr
-      with Not_found ->
-        mty
-      end
-  | Mty_alias(_, path, constr2), _ ->
-      let new_constr = match constr2 with
-      | Some mty -> begin try
-          Some (scrape_alias env mty)
-        with Not_found -> Some mty
-        end
-      | None -> constr
-      in begin try
-      (* TODO mdebski: constr2 should be always subtype of constr,
-         but it possibly gets checked somewhere already *)
-        match new_constr with
-        | None -> scrape_alias env (find_module path env).md_type ~path
-        | Some new_constr ->
-          scrape_alias env (find_module path env).md_type ~path
-                               ~constr:new_constr
-      with Not_found ->
-        (*Location.prerr_warning Location.none
-          (Warnings.No_cmi_file (Path.name path));*)
-        mty
-      end
+  begin try match mty, path with
+  | Mty_ident p, _ ->
+      scrape_alias env (find_modtype_expansion p env) ?path ?constr
+  | Mty_alias(_, path, None), _ ->
+      scrape_alias env (find_module path env).md_type ~path ?constr
+  | Mty_alias(_, path, Some cmty), _ -> begin match constr with
+    | None ->
+      (* if no constraint yet, set one *)
+      scrape_alias env (find_module path env).md_type ~path ~constr:cmty
+    | Some _cmty2 ->
+      (* if there is a constraint already it is the outermost, the most specific,
+         so just pass it on *)
+      (* TODO mdebski: cmty2 should be always supertype of cmty,
+         but it possibly gets checked somewhere already. *)
+      scrape_alias env (find_module path env).md_type ~path ?constr
+    end
   | mty, Some path -> begin match constr with
     | None -> !strengthen ~aliasable:true env mty path
     | Some cmty -> !strengthen ~aliasable:true env cmty path
-  end
+    end
   | _ -> mty
+  with Not_found -> mty
+      (*Location.prerr_warning Location.none
+        (Warnings.No_cmi_file (Path.name path));*)
+  end
+;;
 
 let scrape_alias env mty = scrape_alias env mty
 
