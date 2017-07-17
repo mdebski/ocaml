@@ -256,22 +256,21 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         in
         Tcoerce_alias (p1, Tcoerce_none)
     end
-  | (Mty_alias(pres1, p1, None), _) -> begin
+  | (Mty_alias(pres1, p1, omty1), _) -> begin
       let p1 = try
         Env.normalize_path (Some Location.none) env p1
       with Env.Error (Env.Missing_module (_, _, path)) ->
         raise (Error[cxt, env, Unbound_module_path path])
       in
-      let mty1 =
-        Mtype.strengthen ~aliasable:true env
-          (expand_module_alias env cxt p1) p1
+      let mty1 = match omty1 with
+      | None -> Mtype.strengthen ~aliasable:true env (expand_module_alias env cxt p1) p1
+      | Some cmty -> Mtype.strengthen ~aliasable:true env cmty p1
       in
       let cc = modtypes ~loc env cxt subst mty1 mty2 in
       match pres1 with
       | Mta_present -> cc
       | Mta_absent -> Tcoerce_alias (p1, cc)
     end
-  | (Mty_alias(_, _, _), _) -> failwith "try_modtypes NYI 2."
   | (Mty_ident p1, _) when may_expand_module_path env p1 ->
       try_modtypes ~loc env cxt subst (expand_module_path env cxt p1) mty2
   | (_, Mty_ident _) ->
