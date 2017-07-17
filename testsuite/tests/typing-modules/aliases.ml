@@ -920,3 +920,49 @@ Error: Signature mismatch:
          AB
        The value `b' is required but not provided
 |}]
+
+module type AB = sig
+  type t
+  val a : t
+  val b : t
+end
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module type M_A = sig
+  module Inner : A
+end
+
+module type M_AB = sig
+  module Inner : AB
+end
+
+module M : M_AB = struct
+  module Inner = struct
+    type t = ()
+    let a = ()
+    let b = ()
+  end
+end
+
+module N = (M :> M_A)
+module O = N.Inner
+
+let _ : M.Inner.t = O.a
+let _ = O.b
+
+[%%expect {|
+module type AB = sig type t val a : t val b : t end
+module type A = sig type t val a : t end
+module type M_A = sig module Inner : A end
+module type M_AB = sig module Inner : AB end
+module M : M_AB
+module N = M :> M_A
+module O = N.Inner
+- : O.t = <abstr>
+Line _, characters 8-11:
+Error: Unbound value O.b
+|}]
