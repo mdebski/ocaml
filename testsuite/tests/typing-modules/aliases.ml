@@ -764,7 +764,7 @@ module type A = sig
   val a : t
 end
 
-module M = struct
+module M : AB = struct
   type t = ()
   let a = ()
   let b = ()
@@ -781,11 +781,60 @@ let _ = f N.b
 [%%expect{|
 module type AB = sig type t val a : t val b : t end
 module type A = sig type t val a : t end
-module M : sig type t = () val a : t val b : t end
+module M : AB
 val f : M.t -> M.t = <fun>
 module N = M :> A
-- : M.t = M.()
-- : M.t = M.()
+- : M.t = <abstr>
+- : M.t = <abstr>
 Line _, characters 10-13:
 Error: Unbound value N.b
+|}]
+
+module type ABC = sig
+  type t
+  val a : t
+  val b : t
+  val c : t
+end
+
+module type AB = sig
+  type t
+  val a : t
+  val b : t
+end
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module M : ABC = struct
+  type t = ()
+  let a = ()
+  let b = ()
+  let c = ()
+end
+
+let f (x : M.t) : M.t = x
+
+module N = (M :> AB)
+module O = (N :> A)
+
+module P = ((M :> AB) :> A)
+
+let _ = f O.a
+let _ = f P.a
+let _ = f P.b
+[%%expect{|
+module type ABC = sig type t val a : t val b : t val c : t end
+module type AB = sig type t val a : t val b : t end
+module type A = sig type t val a : t end
+module M : ABC
+val f : M.t -> M.t = <fun>
+module N = M :> AB
+module O = N :> A
+- : M.t = <abstr>
+- : M.t = <abstr>
+Line _, characters 10-13:
+Error: Unbound value P.b
 |}]
