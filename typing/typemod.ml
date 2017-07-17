@@ -1182,8 +1182,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
   | Pmod_tconstraint(sarg, smty) ->
       let arg = type_module ~alias true funct_body anchor env sarg in
       let mty = transl_modtype env smty in
-      let coercion =
-        try
+      let coercion = try
           Includemod.modtypes ~loc:arg.mod_loc env arg.mod_type mty.mty_type
         with Includemod.Error msg ->
           raise(Error(arg.mod_loc, env, Not_included msg))
@@ -1196,7 +1195,24 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
             mod_loc = smod.pmod_loc;
             mod_attributes = smod.pmod_attributes;
           }
-        | _ -> failwith "NYI left-hand side not an ident in Pmod_tconstraint"
+        | Tmod_tconstraint (expr, cmt, _) ->
+          let coercion = try
+            Includemod.modtypes ~loc:arg.mod_loc env cmt.mty_type mty.mty_type
+          with Includemod.Error msg ->
+            raise(Error(arg.mod_loc, env, Not_included msg))
+          in let rec extract_path expr = match expr with
+          | Tmod_ident (path, _) -> path
+          | Tmod_tconstraint (expr, _, _) -> extract_path (expr.mod_desc)
+          | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
+          in
+          { mod_desc = Tmod_tconstraint(expr, mty, coercion);
+            mod_type = Mty_alias (Mta_present, extract_path expr.mod_desc,
+                                  Some mty.mty_type);
+            mod_env = env;
+            mod_loc = smod.pmod_loc;
+            mod_attributes = smod.pmod_attributes;
+          }
+        | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
       end
   | Pmod_unpack sexp ->
       if !Clflags.principal then Ctype.begin_def ();
