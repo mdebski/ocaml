@@ -603,8 +603,9 @@ let check_modtype_inclusion =
           loc:Location.t -> t -> module_type -> Path.t -> module_type -> unit)
 let strengthen =
   (* to be filled with Mtype.strengthen *)
-  ref ((fun ~aliasable:_ _env _mty _path -> assert false) :
-         aliasable:bool -> t -> module_type -> Path.t -> module_type)
+  ref ((fun ~aliasable:_ ?add_constraints:_ _env _mty _path -> assert false) :
+         aliasable:bool -> ?add_constraints:bool -> t -> module_type -> Path.t
+       -> module_type)
 
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
@@ -1589,7 +1590,7 @@ let rec scrape_alias env ?path ?constr mty =
     end
   | mty, Some path -> begin match constr with
     | None -> !strengthen ~aliasable:true env mty path
-    | Some cmty -> !strengthen ~aliasable:true env cmty path
+    | Some cmty -> !strengthen ~aliasable:true ~add_constraints:true env cmty path
     end
   | _ -> mty
   with Not_found -> mty

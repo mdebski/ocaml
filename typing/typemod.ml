@@ -1083,16 +1083,18 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         if alias && aliasable then
           (Env.add_required_global (Path.head path); md)
         else match (Env.find_module path env).md_type with
-        | Mty_alias(_, p1, None) when not alias ->
+        | Mty_alias(_, p1, omty) when not alias ->
             let p1 = Env.normalize_path (Some smod.pmod_loc) env p1 in
-            let mty = Includemod.expand_module_alias env [] p1 in
+            let mty, add_constraints = match omty with
+              | None -> Includemod.expand_module_alias env [] p1, false
+              | Some cmty -> cmty, true
+            in
             { md with
               mod_desc = Tmod_constraint (md, mty, Tmodtype_implicit,
                                           Tcoerce_alias (p1, Tcoerce_none));
               mod_type =
-                if sttn then Mtype.strengthen ~aliasable:true env mty p1
+                if sttn then Mtype.strengthen ~aliasable:true ~add_constraints env mty p1
                 else mty }
-        | Mty_alias(_, _p1, Some _cmty) when not alias -> failwith "typemod NYI 1."
         | mty ->
             let mty =
               if sttn then Mtype.strengthen ~aliasable env mty path
