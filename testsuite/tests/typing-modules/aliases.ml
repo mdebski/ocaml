@@ -833,8 +833,90 @@ module M : ABC
 val f : M.t -> M.t = <fun>
 module N = M :> AB
 module O = N :> A
+module P = M :> A
 - : M.t = <abstr>
 - : M.t = <abstr>
 Line _, characters 10-13:
 Error: Unbound value P.b
+|}]
+
+module type AB = sig
+  type t
+  val a : t
+  val b : t
+end
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module M : AB = struct
+  type t = ()
+  let a = ()
+  let b = ()
+end
+
+module G = functor (X : A) -> struct type t end
+
+module N = (M :> A)
+module O = (M : A)
+
+module GM = G(M)
+module GN = G(N)
+module GO = G(O)
+
+let f : (GM.t -> GM.t) = (fun (x : GN.t) -> x)
+let bad : (GM.t -> GM.t) = (fun (x : GO.t) -> x)
+
+[%%expect{|
+module type AB = sig type t val a : t val b : t end
+module type A = sig type t val a : t end
+module M : AB
+module G : functor (X : A) -> sig type t end
+module N = M :> A
+module O : A
+module GM : sig type t = G(M).t end
+module GN : sig type t = G(N).t end
+module GO : sig type t = G(O).t end
+val f : GM.t -> GM.t = <fun>
+Line _, characters 32-42:
+Error: This pattern matches values of type GO.t = G(O).t
+       but a pattern was expected which matches values of type GM.t = G(M).t
+|}]
+
+module type AB = sig
+  type t
+  val a : t
+  val b : t
+end
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module M : AB = struct
+  type t = ()
+  let a = ()
+  let b = ()
+end
+
+module N = (M :> A)
+
+module F = functor (X : AB) -> struct end
+module Bad = F(N)
+[%%expect {|
+module type AB = sig type t val a : t val b : t end
+module type A = sig type t val a : t end
+module M : AB
+module N = M :> A
+module F : functor (X : AB) -> sig  end
+Line _, characters 15-16:
+Error: Signature mismatch:
+       Modules do not match:
+         sig type t = M.t val a : t end
+       is not included in
+         AB
+       The value `b' is required but not provided
 |}]
