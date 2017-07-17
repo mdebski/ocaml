@@ -1207,7 +1207,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           | Tmod_tconstraint (expr, _, _) -> extract_path (expr.mod_desc)
           | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
           in
-          { mod_desc = Tmod_tconstraint(expr, mty, coercion);
+          { mod_desc = Tmod_tconstraint(arg, mty, coercion);
             mod_type = Mty_alias (Mta_present, extract_path expr.mod_desc,
                                   Some mty.mty_type);
             mod_env = env;
