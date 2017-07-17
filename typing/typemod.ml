@@ -1092,7 +1092,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
               mod_type =
                 if sttn then Mtype.strengthen ~aliasable:true env mty p1
                 else mty }
-        | Mty_alias(_, _p1, _) -> failwith "typemod NYI 1."
+        | Mty_alias(_, _p1, Some _cmty) when not alias -> failwith "typemod NYI 1."
         | mty ->
             let mty =
               if sttn then Mtype.strengthen ~aliasable env mty path
