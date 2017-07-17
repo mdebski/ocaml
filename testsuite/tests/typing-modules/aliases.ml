@@ -752,3 +752,40 @@ R.M.f 3;;
 module rec R : sig module M = M end
 - : int = 3
 |}];;
+
+module type AB = sig
+  type t
+  val a : t
+  val b : t
+end
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module M = struct
+  type t = ()
+  let a = ()
+  let b = ()
+end
+
+let f (x : M.t) : M.t = x
+
+module N = (M :> A)
+
+let _ = f N.a
+let _ = f M.b
+
+let _ = f N.b
+[%%expect{|
+module type AB = sig type t val a : t val b : t end
+module type A = sig type t val a : t end
+module M : sig type t = () val a : t val b : t end
+val f : M.t -> M.t = <fun>
+module N = M :> A
+- : M.t = M.()
+- : M.t = M.()
+Line _, characters 10-13:
+Error: Unbound value N.b
+|}]
