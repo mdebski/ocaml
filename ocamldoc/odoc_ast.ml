@@ -1672,8 +1672,8 @@ module Analyser =
       in
       let m_code_intf =
         match p_module_expr.Parsetree.pmod_desc with
-        (* TODO mdebski: we should probably handle tconstraint in odoc somehow *)
-        | Parsetree.Pmod_constraint (_, pmodule_type) ->
+        | Parsetree.Pmod_constraint (_, pmodule_type)
+        | Parsetree.Pmod_tconstraint (_, pmodule_type) ->
             let loc_start = pmodule_type.Parsetree.pmty_loc.Location.loc_start.Lexing.pos_cnum in
             let loc_end = pmodule_type.Parsetree.pmty_loc.Location.loc_end.Lexing.pos_cnum in
             Some (get_string_of_file loc_start loc_end)
@@ -1700,6 +1700,9 @@ module Analyser =
         | (Parsetree.Pmod_ident _,
            Typedtree.Tmod_constraint
              ({Typedtree.mod_desc = Typedtree.Tmod_ident (path, _)}, _, _, _))
+        | (Parsetree.Pmod_ident _,
+           Typedtree.Tmod_tconstraint
+             ({Typedtree.mod_desc = Typedtree.Tmod_ident (path, _)}, _, _))
           ->
           let alias_name = Odoc_env.full_module_name env (Name.from_path path) in
           { m_base with m_kind = Module_alias { ma_name = alias_name ;
@@ -1756,8 +1759,12 @@ module Analyser =
       | (Parsetree.Pmod_apply (p_module_expr1, p_module_expr2),
          Typedtree.Tmod_constraint
            ({ Typedtree.mod_desc = Typedtree.Tmod_apply (tt_module_expr1, tt_module_expr2, _)}, _,
-            _, _)
-        ) ->
+            _, _))
+      | (Parsetree.Pmod_apply (p_module_expr1, p_module_expr2),
+         Typedtree.Tmod_tconstraint
+           ({ Typedtree.mod_desc = Typedtree.Tmod_apply (tt_module_expr1, tt_module_expr2, _)}, _,
+            _))
+          ->
           let m1 = analyse_module
               env
               current_module_name
@@ -1777,8 +1784,11 @@ module Analyser =
           { m_base with m_kind = Module_apply (m1.m_kind, m2.m_kind) }
 
       | (Parsetree.Pmod_constraint (p_module_expr2, p_modtype),
-         Typedtree.Tmod_constraint (tt_module_expr2, tt_modtype, _, _)) ->
-          print_DEBUG ("Odoc_ast: case Parsetree.Pmod_constraint + Typedtree.Tmod_constraint "^module_name);
+         Typedtree.Tmod_constraint (tt_module_expr2, tt_modtype, _, _))
+      | (Parsetree.Pmod_tconstraint (p_module_expr2, p_modtype),
+         Typedtree.Tmod_tconstraint (tt_module_expr2, { mty_type = tt_modtype}, _))
+        ->
+          print_DEBUG ("Odoc_ast: case Parsetree.Pmod_constraint + Typedtree.Tmod_(t)constraint "^module_name);
           let m_base2 = analyse_module
               env
               current_module_name
@@ -1849,6 +1859,7 @@ module Analyser =
           (*DEBUG*)  | Parsetree.Pmod_functor _ -> "Pmod_functor"
           (*DEBUG*)  | Parsetree.Pmod_apply _ -> "Pmod_apply"
           (*DEBUG*)  | Parsetree.Pmod_constraint _ -> "Pmod_constraint"
+          (*DEBUG*)  | Parsetree.Pmod_tconstraint _ -> "Pmod_tconstraint"
           (*DEBUG*)  | Parsetree.Pmod_unpack _ -> "Pmod_unpack"
           (*DEBUG*)  | Parsetree.Pmod_extension _ -> "Pmod_extension"
           (*DEBUG*)in
@@ -1858,7 +1869,7 @@ module Analyser =
           (*DEBUG*)  | Typedtree.Tmod_structure _ -> "Tmod_structure"
           (*DEBUG*)  | Typedtree.Tmod_functor _ -> "Tmod_functor"
           (*DEBUG*)  | Typedtree.Tmod_apply _ -> "Tmod_apply"
-          (*DEBUG*)  | Typedtree.Tmod_constraint _ -> "Tmod_constraint"
+          (*DEBUG*)  | Typedtree.Tmod_tconstraint _ -> "Tmod_tconstraint"
           (*DEBUG*)  | Typedtree.Tmod_unpack _ -> "Tmod_unpack"
           (*DEBUG*)in
           (*DEBUG*)let code = get_string_of_file pos_start pos_end in

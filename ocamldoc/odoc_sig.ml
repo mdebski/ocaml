@@ -1342,8 +1342,7 @@ module Analyser =
       | Parsetree.Pmty_alias longident ->
           let name =
             match sig_module_type with
-              Types.Mty_alias(_, path, None) -> Name.from_path path
-            | Types.Mty_alias(_, _path, _) -> failwith "odoc NYI."
+              Types.Mty_alias(_, path, _) -> Name.from_path path
             | _ -> Name.from_longident longident.txt
           in
           (* Wrong naming... *)
