@@ -1700,13 +1700,19 @@ module Analyser =
         | (Parsetree.Pmod_ident _,
            Typedtree.Tmod_constraint
              ({Typedtree.mod_desc = Typedtree.Tmod_ident (path, _)}, _, _, _))
-        | (Parsetree.Pmod_ident _,
-           Typedtree.Tmod_tconstraint
-             ({Typedtree.mod_desc = Typedtree.Tmod_ident (path, _)}, _, _))
           ->
           let alias_name = Odoc_env.full_module_name env (Name.from_path path) in
           { m_base with m_kind = Module_alias { ma_name = alias_name ;
-                                                ma_module = None ; } }
+                                                ma_module = None ;
+                                                ma_constraint = None } }
+        | (Parsetree.Pmod_ident _,
+           Typedtree.Tmod_tconstraint
+             ({Typedtree.mod_desc = Typedtree.Tmod_ident (path, _)}, constr, _))
+          ->
+          let alias_name = Odoc_env.full_module_name env (Name.from_path path) in
+          { m_base with m_kind = Module_alias { ma_name = alias_name ;
+                                                ma_module = None ;
+                                                ma_constraint = Some constr.mty_type } }
 
       | (Parsetree.Pmod_structure p_structure, Typedtree.Tmod_structure tt_structure) ->
           let elements = analyse_structure env complete_name pos_start pos_end p_structure tt_structure in
@@ -1845,7 +1851,7 @@ module Analyser =
                 Odoc_env.full_module_type_name env (Name.from_path p)
             | _ -> ""
           in
-          let alias = { mta_name = name ; mta_module = None } in
+          let alias = { mta_name = name ; mta_module = None; mta_constraint = None } in
           { m_base with
             m_type = Odoc_env.subst_module_type env tt_modtype ;
             m_kind = Module_unpack (code, alias) ;

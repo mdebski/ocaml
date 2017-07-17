@@ -1337,17 +1337,17 @@ module Analyser =
               (* FIXME this happens for module type F : functor ... -> Toto, Toto is not an ident but a structure *)
           in
           Module_type_alias { mta_name = Odoc_env.full_module_type_name env name ;
-                              mta_module = None }
+                              mta_module = None ; mta_constraint = None}
 
       | Parsetree.Pmty_alias longident ->
-          let name =
+          let name, constr =
             match sig_module_type with
-              Types.Mty_alias(_, path, _) -> Name.from_path path
-            | _ -> Name.from_longident longident.txt
+              Types.Mty_alias(_, path, constr) -> Name.from_path path, constr
+            | _ -> Name.from_longident longident.txt, None
           in
           (* Wrong naming... *)
           Module_type_alias { mta_name = Odoc_env.full_module_name env name ;
-                              mta_module = None }
+                              mta_module = None ; mta_constraint = constr}
 
       | Parsetree.Pmty_signature ast ->
           (
@@ -1431,11 +1431,10 @@ module Analyser =
       | Parsetree.Pmty_alias _longident ->
           begin
             match sig_module_type with
-              Types.Mty_alias(_, path, None) ->
+              Types.Mty_alias(_, path, omty) ->
                 let alias_name = Odoc_env.full_module_name env (Name.from_path path) in
-                let ma = { ma_name = alias_name ; ma_module = None } in
-                Module_alias ma
-            | Types.Mty_alias(_, _path, _) -> failwith "odoc NYI."
+                Module_alias { ma_name = alias_name ; ma_module = None;
+                               ma_constraint = omty }
             | _ ->
               raise (Failure "Parsetree.Pmty_alias _ but not Types.Mty_alias _")
            end

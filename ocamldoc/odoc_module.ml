@@ -43,10 +43,11 @@ and included_module = {
     mutable im_info : Odoc_types.info option ; (** comment associated to the includ directive *)
   }
 
-(* TODO mdebski: add here? *)
+(* TODO mdebski: print constraints in module_alias and module_type_alias *)
 and module_alias = {
     ma_name : Name.t ;
     mutable ma_module : mmt option ; (** the real module or module type if we could associate it *)
+    ma_constraint : Types.module_type option ;
   }
 
 and module_parameter = {
@@ -85,10 +86,10 @@ and t_module = {
 and module_type_alias = {
     mta_name : Name.t ;
     mutable mta_module : t_module_type option ; (** the real module type if we could associate it *)
+    mta_constraint : Types.module_type option ;
   }
 
 (** Different kinds of module type. *)
-  (* TODO mdebski: need to add constraint to Module_type_alias? *)
 and module_type_kind =
   | Module_type_struct of module_element list
   | Module_type_functor of module_parameter * module_type_kind

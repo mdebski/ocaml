@@ -496,6 +496,7 @@ module Module :
         {
           ma_name : Name.t ; (** Complete name of the target module. *)
           mutable ma_module : mmt option ; (** The real module or module type if we could associate it. *)
+          ma_constraint : Types.module_type option ;
         }
 
     and module_parameter = Odoc_module.module_parameter = {
@@ -541,6 +542,7 @@ module Module :
         {
           mta_name : Name.t ; (** Complete name of the target module type. *)
           mutable mta_module : t_module_type option ; (** The real module type if we could associate it. *)
+          mta_constraint : Types.module_type option ;
         }
 
     (** Different kinds of module type. *)
