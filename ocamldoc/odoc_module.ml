@@ -43,7 +43,6 @@ and included_module = {
     mutable im_info : Odoc_types.info option ; (** comment associated to the includ directive *)
   }
 
-(* TODO mdebski: print constraints in module_alias and module_type_alias *)
 and module_alias = {
     ma_name : Name.t ;
     mutable ma_module : mmt option ; (** the real module or module type if we could associate it *)
