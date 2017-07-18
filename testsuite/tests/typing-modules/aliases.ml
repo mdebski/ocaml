@@ -753,6 +753,13 @@ module rec R : sig module M = M end
 - : int = 3
 |}];;
 
+module type ABC = sig
+  type t
+  val a : t
+  val b : t
+  val c : t
+end
+
 module type AB = sig
   type t
   val a : t
@@ -779,6 +786,7 @@ let _ = f M.b
 
 let _ = f N.b
 [%%expect{|
+module type ABC = sig type t val a : t val b : t val c : t end
 module type AB = sig type t val a : t val b : t end
 module type A = sig type t val a : t end
 module M : AB
@@ -789,24 +797,6 @@ module N = M :> A
 Line _, characters 10-13:
 Error: Unbound value N.b
 |}]
-
-module type ABC = sig
-  type t
-  val a : t
-  val b : t
-  val c : t
-end
-
-module type AB = sig
-  type t
-  val a : t
-  val b : t
-end
-
-module type A = sig
-  type t
-  val a : t
-end
 
 module M : ABC = struct
   type t = ()
@@ -826,9 +816,6 @@ let _ = f O.a
 let _ = f P.a
 let _ = f P.b
 [%%expect{|
-module type ABC = sig type t val a : t val b : t val c : t end
-module type AB = sig type t val a : t val b : t end
-module type A = sig type t val a : t end
 module M : ABC
 val f : M.t -> M.t = <fun>
 module N = M :> AB
@@ -839,17 +826,6 @@ module P = M :> A
 Line _, characters 10-13:
 Error: Unbound value P.b
 |}]
-
-module type AB = sig
-  type t
-  val a : t
-  val b : t
-end
-
-module type A = sig
-  type t
-  val a : t
-end
 
 module M : AB = struct
   type t = ()
@@ -870,8 +846,6 @@ let f : (GM.t -> GM.t) = (fun (x : GN.t) -> x)
 let bad : (GM.t -> GM.t) = (fun (x : GO.t) -> x)
 
 [%%expect{|
-module type AB = sig type t val a : t val b : t end
-module type A = sig type t val a : t end
 module M : AB
 module G : functor (X : A) -> sig type t end
 module N = M :> A
@@ -885,17 +859,6 @@ Error: This pattern matches values of type GO.t = G(O).t
        but a pattern was expected which matches values of type GM.t = G(M).t
 |}]
 
-module type AB = sig
-  type t
-  val a : t
-  val b : t
-end
-
-module type A = sig
-  type t
-  val a : t
-end
-
 module M : AB = struct
   type t = ()
   let a = ()
@@ -907,8 +870,6 @@ module N = (M :> A)
 module F = functor (X : AB) -> struct end
 module Bad = F(N)
 [%%expect {|
-module type AB = sig type t val a : t val b : t end
-module type A = sig type t val a : t end
 module M : AB
 module N = M :> A
 module F : functor (X : AB) -> sig  end
@@ -920,17 +881,6 @@ Error: Signature mismatch:
          AB
        The value `b' is required but not provided
 |}]
-
-module type AB = sig
-  type t
-  val a : t
-  val b : t
-end
-
-module type A = sig
-  type t
-  val a : t
-end
 
 module type M_A = sig
   module Inner : A
@@ -955,8 +905,6 @@ let _ : M.Inner.t = O.a
 let _ = O.b
 
 [%%expect {|
-module type AB = sig type t val a : t val b : t end
-module type A = sig type t val a : t end
 module type M_A = sig module Inner : A end
 module type M_AB = sig module Inner : AB end
 module M : M_AB
