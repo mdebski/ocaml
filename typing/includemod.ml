@@ -117,13 +117,6 @@ let expand_module_alias env cxt path =
   with Not_found ->
     raise(Error[cxt, env, Unbound_module_path path])
 
-(*
-let rec normalize_module_path env cxt path =
-  match expand_module_alias env cxt path with
-    Mty_alias path' -> normalize_module_path env cxt path'
-  | _ -> path
-*)
-
 (* Extract name, kind and ident from a signature item *)
 
 type field_desc =

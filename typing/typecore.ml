@@ -627,7 +627,7 @@ let rec expand_path env p =
          (* PR#6394: recursive module may introduce incoherent manifest *)
       end
   | _ ->
-      let p' = Env.normalize_path None env p in
+      let p' = Env.normalize_type_path ~env p in
       if Path.same p p' then p else expand_path env p'
 
 let compare_type_path env tpath1 tpath2 =
@@ -2013,10 +2013,6 @@ and type_expect_ ?in_function ?(recarg=Rejected) env sexp ty_expected =
                 Texp_ident(path, lid, desc)
             | Val_unbound ->
                 raise(Error(loc, env, Masked_instance_variable lid.txt))
-            (*| Val_prim _ ->
-                let p = Env.normalize_path (Some loc) env path in
-                Env.add_required_global (Path.head p);
-                Texp_ident(path, lid, desc)*)
             | _ ->
                 Texp_ident(path, lid, desc)
           end;

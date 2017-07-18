@@ -77,6 +77,8 @@ val find_type_expansion_opt:
 val find_modtype_expansion: Path.t -> t -> module_type
 val add_functor_arg: Ident.t -> t -> t
 val is_functor_arg: Path.t -> t -> bool
+
+(* OLD *)
 val normalize_path: Location.t option -> t -> Path.t -> Path.t
 (* Normalize the path to a concrete value or module.
    If the option is None, allow returning dangling paths.
@@ -84,6 +86,13 @@ val normalize_path: Location.t option -> t -> Path.t -> Path.t
    head as required global. *)
 val normalize_path_prefix: Location.t option -> t -> Path.t -> Path.t
 (* Only normalize the prefix part of the path *)
+
+(* NEW *)
+val normalize_type_path: env:t -> Path.t -> Path.t
+val normalize_package_path: env:t -> Path.t -> Path.t
+
+val realize_path: loc:Location.t -> env:t -> Path.t -> Path.t
+
 val reset_required_globals: unit -> unit
 val get_required_globals: unit -> Ident.t list
 val add_required_global: Ident.t -> unit
