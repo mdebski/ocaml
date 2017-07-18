@@ -776,6 +776,12 @@ module type B = sig
   val b : t
 end
 
+module type BA = sig
+  type t
+  val b : t
+  val a : t
+end
+
 module M : AB = struct
   type t = ()
   let a = ()
@@ -794,6 +800,8 @@ let _ = f N.b
 module type ABC = sig type t val a : t val b : t val c : t end
 module type AB = sig type t val a : t val b : t end
 module type A = sig type t val a : t end
+module type B = sig type t val b : t end
+module type BA = sig type t val b : t val a : t end
 module M : AB
 val f : M.t -> M.t = <fun>
 module N = M :> A
@@ -966,3 +974,43 @@ module Q = N :> A
 val x : M.t = 1
 val y : M.t = 2
 |}]
+
+module type Ptype = sig
+  module L : BA
+  module N : sig
+    module O : AB
+  end
+  module X : BA
+end
+
+module M = struct
+  module X = struct
+    type t = int
+    let a = 1
+    let b = 2
+  end
+  module L = X
+  module N = struct
+    module O = (L :> BA)
+  end
+end
+
+module P = (M :> Ptype)
+
+let _ = P.N.O.a;;
+let _ = P.N.O.b;;
+
+[%%expect {|
+module type Ptype =
+  sig module L : BA module N : sig module O : AB end module X : BA end
+module M :
+  sig
+    module X : sig type t = int val a : int val b : int end
+    module L = X
+    module N : sig module O = L :> BA end
+  end
+module P = M :> Ptype
+- : P.N.O.t = 1
+- : P.N.O.t = 2
+|}]
+
