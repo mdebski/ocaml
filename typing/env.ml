@@ -1014,6 +1014,85 @@ let add_required_global id =
   && not (List.exists (Ident.same id) !required_globals)
   then required_globals := id :: !required_globals
 
+(* Simplify path by resolving aliases whenever possible.
+   normalize_module_path -> treat last part as a module, simplify prefix and then simplify
+                            last part if it is an alias.
+   normalize_value_path -> treat last part as a value, simplify just prefix.
+*)
+let rec normalize_module_path ~env path =
+  let path = normalize_value_path ~env path in
+  try match find_module ~alias:true path env with
+  |  {md_type=Mty_alias(_, alias_path, _)} ->
+      normalize_module_path ~env alias_path
+  | _ -> path
+  with Not_found -> path
+and normalize_value_path ~env path = match path with
+  (* Warning: pos may not be correct anymore! *)
+  | Pdot(p, s, pos) -> Pdot(normalize_module_path ~env p, s, pos)
+  | Papply(p1, p2) -> Papply(normalize_module_path ~env p1, normalize_module_path ~env p2)
+  | _ -> path
+
+let normalize_type_path = normalize_value_path
+
+(* for ctype, don't know what it really is *)
+let rec normalize_package_path ~env p =
+  let t =
+    try (find_modtype p env).mtd_type
+    with Not_found -> None
+  in
+  match t with
+  | Some (Mty_ident p) -> normalize_package_path ~env p
+  | Some (Mty_signature _ | Mty_functor _ | Mty_alias _) | None ->
+      match p with
+        Path.Pdot (p1, s, n) ->
+          (* For module aliases *)
+          let p1' = normalize_module_path ~env p1 in
+          if Path.same p1 p1' then p else
+          normalize_package_path ~env (Path.Pdot (p1', s, n))
+      | _ -> p
+
+(* Resolve aliases so that all modules are present
+   Raise if not possible.
+*)
+let rec realize_path ~loc ~env path = realize_module ~loc ~env path (* FIXME *)
+
+and realize_module ~loc ~env path =
+  match find_module ~alias:true path env with
+  | { md_type = Mty_alias(Mta_absent, alias_path, _oconstr) } ->
+    realize_module ~loc ~env alias_path
+  | exception Not_found ->
+    raise (Error(Missing_module(loc, path, normalize_module_path ~env path)))
+  | _ -> path
+
+
+(*
+let rec normalize_path_false ~loc env path =
+  let path =
+    match path with
+      Pdot(p, s, pos) ->
+        Pdot(normalize_path_false ~loc env p, s, pos)
+    | Papply(p1, p2) ->
+        Papply(normalize_path_false ~loc env p1, normalize_path_true env p2)
+    | _ -> path
+  in
+  try match find_module ~alias:true path env with
+    {md_type=Mty_alias(_, path1, _)} ->
+      let path' = normalize_path_false ~loc env path1 in
+      if !Clflags.transparent_modules then path' else
+      let id = Path.head path in
+      if Ident.global id && not (Ident.same id (Path.head path'))
+      then add_required_global id;
+      path'
+  | _ -> path
+  with Not_found ->
+  match path with
+  | Pident id when (not Ident.persistent id) -> path
+  | Pident _ -> raise (Error(Missing_module(loc, path, normalize_path true env path)))
+  | _ -> path
+    when (match path with Pident id -> not (Ident.persistent id) | _ -> true) ->
+      path
+   *)
+
 let rec normalize_path lax env path =
   let path =
     match path with
@@ -1043,6 +1122,7 @@ let normalize_path oloc env path =
     | Some loc ->
         raise (Error(Missing_module(loc, path, normalize_path true env path)))
 
+
 let normalize_path_prefix oloc env path =
   match path with
     Pdot(p, s, pos) ->
@@ -1051,7 +1131,6 @@ let normalize_path_prefix oloc env path =
       path
   | Papply _ ->
       assert false
-
 
 let find_module = find_module ~alias:false
 
