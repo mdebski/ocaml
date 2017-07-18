@@ -1858,7 +1858,7 @@ module Analyser =
                 Odoc_env.full_module_type_name env (Name.from_path p)
             | _ -> ""
           in
-          let alias = { mta_name = name ; mta_module = None; mta_constraint = None } in
+          let alias = { mta_name = name ; mta_module = None } in
           { m_base with
             m_type = Odoc_env.subst_module_type env tt_modtype ;
             m_kind = Module_unpack (code, alias) ;

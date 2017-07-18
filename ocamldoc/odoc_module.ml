@@ -86,7 +86,6 @@ and t_module = {
 and module_type_alias = {
     mta_name : Name.t ;
     mutable mta_module : t_module_type option ; (** the real module type if we could associate it *)
-    mta_constraint : Types.module_type option ;
   }
 
 (** Different kinds of module type. *)

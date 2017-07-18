@@ -1337,17 +1337,17 @@ module Analyser =
               (* FIXME this happens for module type F : functor ... -> Toto, Toto is not an ident but a structure *)
           in
           Module_type_alias { mta_name = Odoc_env.full_module_type_name env name ;
-                              mta_module = None ; mta_constraint = None}
+                              mta_module = None }
 
       | Parsetree.Pmty_alias longident ->
-          let name, constr =
+          let name =
             match sig_module_type with
-              Types.Mty_alias(_, path, constr) -> Name.from_path path, constr
-            | _ -> Name.from_longident longident.txt, None
+              Types.Mty_alias(_, path, _) -> Name.from_path path
+            | _ -> Name.from_longident longident.txt
           in
           (* Wrong naming... *)
           Module_type_alias { mta_name = Odoc_env.full_module_name env name ;
-                              mta_module = None ; mta_constraint = constr}
+                              mta_module = None }
 
       | Parsetree.Pmty_signature ast ->
           (

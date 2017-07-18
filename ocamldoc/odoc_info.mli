@@ -542,7 +542,6 @@ module Module :
         {
           mta_name : Name.t ; (** Complete name of the target module type. *)
           mutable mta_module : t_module_type option ; (** The real module type if we could associate it. *)
-          mta_constraint : Types.module_type option ;
         }
 
     (** Different kinds of module type. *)
