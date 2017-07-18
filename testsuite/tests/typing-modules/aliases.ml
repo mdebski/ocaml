@@ -771,6 +771,11 @@ module type A = sig
   val a : t
 end
 
+module type B = sig
+  type t
+  val b : t
+end
+
 module M : AB = struct
   type t = ()
   let a = ()
@@ -913,4 +918,51 @@ module O = N.Inner
 - : O.t = <abstr>
 Line _, characters 8-11:
 Error: Unbound value O.b
+|}]
+
+module M : AB = struct
+  type t = ()
+  let a = ()
+  let b = ()
+end
+
+module N = M
+module O = (N :> A)
+module P = O
+
+let _ : M.t = P.a
+let _ = P.b
+
+[%%expect {|
+module M : AB
+module N = M
+module O = N :> A
+module P = O
+- : P.t = <abstr>
+Line _, characters 8-11:
+Error: Unbound value P.b
+|}]
+
+module M = struct
+  type t = int
+  let a = 1
+  let b = 2
+end
+
+module N = M
+module O = (N :> B)
+module P = O
+module Q = (N :> A)
+
+let x : M.t = Q.a
+let y : M.t = P.b
+
+[%%expect {|
+module M : sig type t = int val a : int val b : int end
+module N = M
+module O = N :> B
+module P = O
+module Q = N :> A
+val x : M.t = 1
+val y : M.t = 2
 |}]
