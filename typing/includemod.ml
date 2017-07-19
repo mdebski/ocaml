@@ -517,10 +517,7 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
 (* realize path *)
         (* TODO mdebski - we raise error without loc, remove loc? *)
 and realize_module_path_with_coercion ~loc ~env path =
-  (* TODO mdebski:
-     Was ~alias:true to find_module needed?
-  *)
-  match (Env.find_module path env).md_type with
+  match (Env.find_module_alias path env).md_type with
     (*
        TODO mdebski:
        Use find_module(alias_path) instead of mty?
@@ -581,7 +578,7 @@ let _ = Env.check_modtype_inclusion := check_modtype_inclusion
 let () = Env.realize_module_path := fun ~loc ~env path ->
   fst (realize_module_path_with_coercion ~loc ~env path)
 let () = Env.realize_value_path := fun ~loc ~env path ->
-  fst (realize_module_path_with_coercion ~loc ~env path)
+  fst (realize_value_path_with_coercion ~loc ~env path)
 
 (* Check that an implementation of a compilation unit meets its
    interface. *)

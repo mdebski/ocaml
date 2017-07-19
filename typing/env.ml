@@ -1057,6 +1057,7 @@ let rec normalize_package_path ~env p =
           normalize_package_path ~env (Path.Pdot (p1', s, n))
       | _ -> p
 
+let find_module_alias = find_module ~alias:true
 let find_module = find_module ~alias:false
 
 (* Find the manifest type associated to a type when appropriate:
