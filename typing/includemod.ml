@@ -226,32 +226,31 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
       if Env.is_functor_arg p2 env then
         raise (Error[cxt, env, Invalid_module_alias p2]);
       if not (Path.same p1 p2) then begin
-        let p1 = Env.normalize_path None env p1
-        and p2 = Env.normalize_path None env (Subst.module_path subst p2) in
+        let p1 = Env.normalize_module_path ~env p1
+        and p2 = Env.normalize_module_path ~env (Subst.module_path subst p2) in
         if not (Path.same p1 p2) then raise Dont_match
       end;
-      match omty1, omty2 with
+      let inner_coercion = match omty1, omty2 with
       | None, Some restr -> modtypes ~loc env cxt subst mty1 restr
       | Some restr1, Some restr2 -> modtypes ~loc env cxt subst restr1 restr2
-      | _ -> ()
-      ;
-      match pres1, pres2 with
-      | Mta_present, Mta_present -> Tcoerce_none
+      | _ ->  Tcoerce_none
+      in match pres1, pres2 with
+      | Mta_present, Mta_present -> inner_coercion
         (* Should really be Tcoerce_ignore if it existed *)
       | Mta_absent, Mta_absent -> Tcoerce_none
         (* Should really be Tcoerce_empty if it existed *)
       | Mta_present, Mta_absent -> Tcoerce_none
       | Mta_absent, Mta_present ->
         let p1 = try
-            Env.normalize_path (Some Location.none) env p1
+            Env.realize_module_path_no_location ~env p1
           with Env.Error (Env.Missing_module (_, _, path)) ->
             raise (Error[cxt, env, Unbound_module_path path])
         in
-        Tcoerce_alias (p1, Tcoerce_none)
+        Tcoerce_alias (p1, inner_coercion)
     end
   | (Mty_alias(pres1, p1, omty1), _) -> begin
       let p1 = try
-        Env.normalize_path (Some Location.none) env p1
+        Env.realize_module_path_no_location ~env p1
       with Env.Error (Env.Missing_module (_, _, path)) ->
         raise (Error[cxt, env, Unbound_module_path path])
       in
@@ -259,10 +258,10 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
       | None -> Mtype.strengthen ~aliasable:true env (expand_module_alias env cxt p1) p1
       | Some cmty -> Mtype.strengthen ~aliasable:true env cmty p1
       in
-      let cc = modtypes ~loc env cxt subst mty1 mty2 in
+      let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
       match pres1 with
-      | Mta_present -> cc
-      | Mta_absent -> Tcoerce_alias (p1, cc)
+      | Mta_present -> inner_coercion
+      | Mta_absent -> Tcoerce_alias (p1, inner_coercion)
     end
   | (Mty_ident p1, _) when may_expand_module_path env p1 ->
       try_modtypes ~loc env cxt subst (expand_module_path env cxt p1) mty2
@@ -293,8 +292,8 @@ and try_modtypes2 ~loc env cxt mty1 mty2 =
   (* mty2 is an identifier *)
   match (mty1, mty2) with
     (Mty_ident p1, Mty_ident p2)
-    when Path.same (Env.normalize_path_prefix None env p1)
-                   (Env.normalize_path_prefix None env p2) ->
+    when Path.same (Env.normalize_value_path ~env p1)
+                   (Env.normalize_value_path ~env p2) ->
       Tcoerce_none
   | (_, Mty_ident p2) when may_expand_module_path env p2 ->
       try_modtypes ~loc env cxt Subst.identity mty1 (expand_module_path env cxt p2)

@@ -120,7 +120,7 @@ let name_pattern default p =
   | _ -> Ident.create default
 
 let normalize_cl_path cl path =
-  Env.normalize_path (Some cl.cl_loc) cl.cl_env path
+  Env.realize_value_path ~loc:cl.cl_loc ~env:cl.cl_env path
 
 let rec build_object_init cl_table obj params inh_init obj_init cl =
   match cl.cl_desc with

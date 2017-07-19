@@ -1374,7 +1374,7 @@ let expand_abbrev_gen kind find_type_expansion env ty =
           match find_type_expansion path env with
           | exception Not_found ->
             (* another way to expand is to normalize the path itself *)
-            let path' = Env.normalize_type_path ~env path in
+            let path' = Env.normalize_value_path ~env path in
             if Path.same path path' then raise Cannot_expand
             else newty2 level (Tconstr (path', args, abbrev))
           | (params, body, lv) ->

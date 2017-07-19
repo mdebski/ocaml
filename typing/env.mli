@@ -78,20 +78,31 @@ val find_modtype_expansion: Path.t -> t -> module_type
 val add_functor_arg: Ident.t -> t -> t
 val is_functor_arg: Path.t -> t -> bool
 
-(* OLD *)
-val normalize_path: Location.t option -> t -> Path.t -> Path.t
-(* Normalize the path to a concrete value or module.
-   If the option is None, allow returning dangling paths.
-   Otherwise raise a Missing_module error, and may add forgotten
-   head as required global. *)
-val normalize_path_prefix: Location.t option -> t -> Path.t -> Path.t
-(* Only normalize the prefix part of the path *)
+(* Normalize path - unroll all aliases on the path.
+   _value_ -> treat last part as a value, do not modify it
+   _module -> treat last part as a module, possibly change it too if an alias
+   Warning: it breaks positions in Pdot.
+   TODO mdebski: maybe return Longident.t, which has no positions, instead?
+*)
+val normalize_value_path: env:t -> Path.t -> Path.t
+val normalize_module_path: env:t -> Path.t -> Path.t
 
-(* NEW *)
-val normalize_type_path: env:t -> Path.t -> Path.t
+(* TODO mdebski: WTF? *)
 val normalize_package_path: env:t -> Path.t -> Path.t
 
-val realize_path: loc:Location.t -> env:t -> Path.t -> Path.t
+(*
+   Get a real path by which value may be accessed.
+
+   Unrolls aliases until a present one is found. May raise if some module is unavailable.
+
+   The latter variants are to be used only if no location is available.
+*)
+val realize_module_path: loc:Location.t -> env:t -> Path.t -> Path.t
+val realize_value_path: loc:Location.t -> env:t -> Path.t -> Path.t
+
+val realize_module_path_no_location: env:t -> Path.t -> Path.t
+val realize_value_path_no_location: env:t -> Path.t -> Path.t
+
 
 val reset_required_globals: unit -> unit
 val get_required_globals: unit -> Ident.t list

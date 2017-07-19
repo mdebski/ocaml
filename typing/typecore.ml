@@ -627,7 +627,7 @@ let rec expand_path env p =
          (* PR#6394: recursive module may introduce incoherent manifest *)
       end
   | _ ->
-      let p' = Env.normalize_type_path ~env p in
+      let p' = Env.normalize_value_path ~env p in
       if Path.same p p' then p else expand_path env p'
 
 let compare_type_path env tpath1 tpath2 =

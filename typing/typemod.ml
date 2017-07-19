@@ -1084,7 +1084,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           (Env.add_required_global (Path.head path); md)
         else match (Env.find_module path env).md_type with
         | Mty_alias(_, p1, omty) when not alias ->
-            let p1 = Env.normalize_path (Some smod.pmod_loc) env p1 in
+            let p1 = Env.realize_module_path ~loc:smod.pmod_loc ~env p1 in
             let mty, add_constraints = match omty with
               | None -> Includemod.expand_module_alias env [] p1, false
               | Some cmty -> cmty, true
@@ -1192,7 +1192,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         match arg.mod_desc with
         | Tmod_ident (path, _) ->
           { mod_desc = Tmod_tconstraint(arg, mty, coercion);
-            mod_type = Mty_alias (Mta_present, path, Some mty.mty_type);
+            mod_type = Mty_alias (Mta_absent, path, Some mty.mty_type);
             mod_env = env;
             mod_loc = smod.pmod_loc;
             mod_attributes = smod.pmod_attributes;
@@ -1208,7 +1208,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
           in
           { mod_desc = Tmod_tconstraint(arg, mty, coercion);
-            mod_type = Mty_alias (Mta_present, extract_path expr.mod_desc,
+            mod_type = Mty_alias (Mta_absent, extract_path expr.mod_desc,
                                   Some mty.mty_type);
             mod_env = env;
             mod_loc = smod.pmod_loc;
