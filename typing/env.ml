@@ -1429,6 +1429,7 @@ let rec scrape_alias_for_visit env mty =
   | Mty_alias(_, Pident id, _)
     when Ident.persistent id
       && not (Hashtbl.mem persistent_structures (Ident.name id)) -> false
+  | Mty_alias(_, _, Some _) -> true
   | Mty_alias(_, path, _) -> (* PR#6600: find_module may raise Not_found *)
       begin try scrape_alias_for_visit env (find_module path env).md_type
       with Not_found -> false
@@ -1567,39 +1568,26 @@ let add_gadt_instance_chain env lv t =
 
 (* Expand manifest module type names at the top of the given module type *)
 
-let may_find_module path env = try Some (find_module path env) with Not_found -> None
+let may_find_module path env = try
+    Some (find_module path env)
+  with Not_found -> None
 
-let rec scrape_alias env ?path ?constr mty =
+let rec scrape_alias env ?path mty =
   match mty, path with
   | Mty_ident p, _ ->
     begin match (find_modtype p env).mtd_type with
-    | Some found_mty -> scrape_alias env found_mty ?path ?constr
+    | Some found_mty -> scrape_alias env found_mty ?path
     | None -> mty
     end
-  | Mty_alias(_, path, None), _ ->
-      begin match may_find_module path env with
-      | Some { md_type } -> scrape_alias env md_type ~path ?constr
+  | Mty_alias(_, alias_path, None), _ ->
+      begin match may_find_module alias_path env with
+      | Some { md_type } -> scrape_alias env md_type ~path:alias_path
       | None -> mty
       end
-  | Mty_alias(_, path, Some cmty), _ -> begin match constr with
-    | None ->
-      (* if no constraint yet, set one *)
-      begin match may_find_module path env with
-      | Some { md_type } -> scrape_alias env md_type ~path ~constr:cmty
-      | None -> mty
-      end
-    | Some _cmty2 ->
-      (* if there is a constraint already it is the outermost, the most specific,
-         so just pass it on *)
-      begin match may_find_module path env with
-      | Some { md_type } -> scrape_alias env md_type ~path ?constr
-      | None -> mty
-      end
-    end
-  | mty, Some path -> begin match constr with
-    | None -> !strengthen ~aliasable:`Aliasable env mty path
-    | Some cmty -> !strengthen ~aliasable:`Aliasable_with_constraints env cmty path
-    end
+  | Mty_alias(_, alias_path, Some cmty), _ ->
+    !strengthen ~aliasable:`Aliasable_with_constraints env cmty alias_path
+  | mty, Some path ->
+    !strengthen ~aliasable:`Aliasable env mty path
   | _ -> mty
 ;;
 
