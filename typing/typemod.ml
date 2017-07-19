@@ -226,14 +226,14 @@ let merge_constraint initial_env loc sg constr =
       when Ident.name id = s ->
         let path, md' = Typetexp.find_module initial_env loc lid'.txt in
         let md'' = {md' with md_type = Mtype.remove_aliases env md'.md_type} in
-        let newmd = Mtype.strengthen_decl ~aliasable:false env md'' path in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md'' path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         (Pident id, lid, Twith_module (path, lid')),
         Sig_module(id, newmd, rs) :: rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_modsubst (_, lid'))
       when Ident.name id = s ->
         let path, md' = Typetexp.find_module initial_env loc lid'.txt in
-        let newmd = Mtype.strengthen_decl ~aliasable:false env md' path in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md' path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         real_id := Some id;
         (Pident id, lid, Twith_modsubst (path, lid')),
@@ -935,7 +935,7 @@ let check_recmodule_inclusion env bindings =
      the number of mutually recursive declarations. *)
 
   let subst_and_strengthen env s id mty =
-    Mtype.strengthen ~aliasable:false env (Subst.modtype s mty)
+    Mtype.strengthen ~aliasable:`Not_aliasable env (Subst.modtype s mty)
       (Subst.module_path s (Pident id)) in
 
   let rec check_incl first_time n env s =
@@ -1085,17 +1085,18 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         else match (Env.find_module path env).md_type with
         | Mty_alias(_, p1, omty) when not alias ->
             let p1 = Includemod.realize_module_path ~loc:smod.pmod_loc ~env p1 in
-            let mty, add_constraints = match omty with
-              | None -> Includemod.expand_module_alias env [] p1, false
-              | Some cmty -> cmty, true
+            let mty, aliasable = match omty with
+              | None -> Includemod.expand_module_alias env [] p1, `Aliasable
+              | Some cmty -> cmty, `Aliasable_with_constraints
             in
             { md with
               mod_desc = Tmod_constraint (md, mty, Tmodtype_implicit,
                                           Tcoerce_alias (p1, Tcoerce_none));
               mod_type =
-                if sttn then Mtype.strengthen ~aliasable:true ~add_constraints env mty p1
+                if sttn then Mtype.strengthen ~aliasable env mty p1
                 else mty }
         | mty ->
+            let aliasable = if aliasable then `Aliasable else `Not_aliasable in
             let mty =
               if sttn then Mtype.strengthen ~aliasable env mty path
               else mty

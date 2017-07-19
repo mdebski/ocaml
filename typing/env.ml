@@ -603,9 +603,9 @@ let check_modtype_inclusion =
           loc:Location.t -> t -> module_type -> Path.t -> module_type -> unit)
 let strengthen =
   (* to be filled with Mtype.strengthen *)
-  ref ((fun ~aliasable:_ ?add_constraints:_ _env _mty _path -> assert false) :
-         aliasable:bool -> ?add_constraints:bool -> t -> module_type -> Path.t
-       -> module_type)
+  ref ((fun ~aliasable:_ _env _mty _path -> assert false) :
+         aliasable:[`Aliasable | `Aliasable_with_constraints | `Not_aliasable] ->
+         t -> module_type -> Path.t -> module_type)
 
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
@@ -1567,32 +1567,40 @@ let add_gadt_instance_chain env lv t =
 
 (* Expand manifest module type names at the top of the given module type *)
 
+let may_find_module path env = try Some (find_module path env) with Not_found -> None
+
 let rec scrape_alias env ?path ?constr mty =
-  begin try match mty, path with
+  match mty, path with
   | Mty_ident p, _ ->
-      scrape_alias env (find_modtype_expansion p env) ?path ?constr
+    begin match (find_modtype p env).mtd_type with
+    | Some found_mty -> scrape_alias env found_mty ?path ?constr
+    | None -> mty
+    end
   | Mty_alias(_, path, None), _ ->
-      scrape_alias env (find_module path env).md_type ~path ?constr
+      begin match may_find_module path env with
+      | Some { md_type } -> scrape_alias env md_type ~path ?constr
+      | None -> mty
+      end
   | Mty_alias(_, path, Some cmty), _ -> begin match constr with
     | None ->
       (* if no constraint yet, set one *)
-      scrape_alias env (find_module path env).md_type ~path ~constr:cmty
+      begin match may_find_module path env with
+      | Some { md_type } -> scrape_alias env md_type ~path ~constr:cmty
+      | None -> mty
+      end
     | Some _cmty2 ->
       (* if there is a constraint already it is the outermost, the most specific,
          so just pass it on *)
-      (* TODO mdebski: cmty2 should be always supertype of cmty,
-         but it possibly gets checked somewhere already. *)
-      scrape_alias env (find_module path env).md_type ~path ?constr
+      begin match may_find_module path env with
+      | Some { md_type } -> scrape_alias env md_type ~path ?constr
+      | None -> mty
+      end
     end
   | mty, Some path -> begin match constr with
-    | None -> !strengthen ~aliasable:true env mty path
-    | Some cmty -> !strengthen ~aliasable:true ~add_constraints:true env cmty path
+    | None -> !strengthen ~aliasable:`Aliasable env mty path
+    | Some cmty -> !strengthen ~aliasable:`Aliasable_with_constraints env cmty path
     end
   | _ -> mty
-  with Not_found -> mty
-      (*Location.prerr_warning Location.none
-        (Warnings.No_cmi_file (Path.name path));*)
-  end
 ;;
 
 let scrape_alias env mty = scrape_alias env mty

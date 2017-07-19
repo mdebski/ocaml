@@ -19,6 +19,11 @@ open Asttypes
 open Path
 open Types
 
+type aliasable = [
+  | `Aliasable
+  | `Aliasable_with_constraints
+  | `Not_aliasable
+]
 
 let rec scrape env mty =
   match mty with
@@ -33,18 +38,18 @@ let rec scrape env mty =
 let freshen mty =
   Subst.modtype Subst.identity mty
 
-let rec strengthen ~aliasable ?(add_constraints=false) env mty p =
+let rec strengthen ~aliasable env mty p =
   match scrape env mty with
     Mty_signature sg ->
-      Mty_signature(strengthen_sig ~aliasable ~add_constraints env sg p 0)
+      Mty_signature(strengthen_sig ~aliasable env sg p 0)
   | Mty_functor(param, arg, res)
     when !Clflags.applicative_functors && Ident.name param <> "*" ->
       Mty_functor(param, arg,
-        strengthen ~aliasable:false ~add_constraints env res (Papply(p, Pident param)))
+        strengthen ~aliasable:`Not_aliasable env res (Papply(p, Pident param)))
   | mty ->
       mty
 
-and strengthen_sig ~aliasable ?(add_constraints=false) env sg p pos =
+and strengthen_sig ~aliasable env sg p pos =
   match sg with
     [] -> []
   | (Sig_value(_, desc) as sigelt) :: rem ->
@@ -53,11 +58,11 @@ and strengthen_sig ~aliasable ?(add_constraints=false) env sg p pos =
         | Val_prim _ -> pos
         | _ -> pos + 1
       in
-      sigelt :: strengthen_sig ~aliasable ~add_constraints env rem p nextpos
+      sigelt :: strengthen_sig ~aliasable env rem p nextpos
   | Sig_type(id, {type_kind=Type_abstract}, _) ::
     (Sig_type(id', {type_private=Private}, _) :: _ as rem)
     when Ident.name id = Ident.name id' ^ "#row" ->
-      strengthen_sig ~aliasable ~add_constraints env rem p pos
+      strengthen_sig ~aliasable env rem p pos
   | Sig_type(id, decl, rs) :: rem ->
       let newdecl =
         match decl.type_manifest, decl.type_private, decl.type_kind with
@@ -73,15 +78,15 @@ and strengthen_sig ~aliasable ?(add_constraints=false) env sg p pos =
               { decl with type_manifest = manif }
       in
       Sig_type(id, newdecl, rs) ::
-      strengthen_sig ~aliasable ~add_constraints env rem p pos
+      strengthen_sig ~aliasable env rem p pos
   | (Sig_typext _ as sigelt) :: rem ->
-      sigelt :: strengthen_sig ~aliasable ~add_constraints env rem p (pos+1)
+      sigelt :: strengthen_sig ~aliasable env rem p (pos+1)
   | Sig_module(id, md, rs) :: rem ->
       let str =
-        strengthen_decl ~aliasable ~add_constraints env md (Pdot(p, Ident.name id, pos))
+        strengthen_decl ~aliasable env md (Pdot(p, Ident.name id, pos))
       in
       Sig_module(id, str, rs)
-      :: strengthen_sig ~aliasable ~add_constraints
+      :: strengthen_sig ~aliasable
         (Env.add_module_declaration ~check:false id md env) rem p (pos+1)
       (* Need to add the module in case it defines manifest module types *)
   | Sig_modtype(id, decl) :: rem ->
@@ -93,19 +98,21 @@ and strengthen_sig ~aliasable ?(add_constraints=false) env sg p pos =
             decl
       in
       Sig_modtype(id, newdecl) ::
-      strengthen_sig ~aliasable ~add_constraints (Env.add_modtype id decl env) rem p pos
+      strengthen_sig ~aliasable (Env.add_modtype id decl env) rem p pos
       (* Need to add the module type in case it is manifest *)
   | (Sig_class _ as sigelt) :: rem ->
-      sigelt :: strengthen_sig ~aliasable ~add_constraints env rem p (pos+1)
+      sigelt :: strengthen_sig ~aliasable env rem p (pos+1)
   | (Sig_class_type _ as sigelt) :: rem ->
-      sigelt :: strengthen_sig ~aliasable ~add_constraints env rem p pos
+      sigelt :: strengthen_sig ~aliasable env rem p pos
 
-and strengthen_decl ~aliasable ?(add_constraints=false) env md p =
+and strengthen_decl ~aliasable env md p =
   match md.md_type with
   | Mty_alias _ -> md
-  | _ when aliasable -> let constr = if add_constraints then Some md.md_type else None in
-    {md with md_type = Mty_alias(Mta_present, p, constr)}
-  | mty -> {md with md_type = strengthen ~aliasable ~add_constraints env mty p}
+  | mty when aliasable = `Aliasable_with_constraints ->
+    {md with md_type = Mty_alias(Mta_present, p, Some mty)}
+  | _mty when aliasable = `Aliasable ->
+    {md with md_type = Mty_alias(Mta_present, p, None)}
+  | mty -> {md with md_type = strengthen ~aliasable env mty p}
 
 let () = Env.strengthen := strengthen
 
@@ -127,8 +134,10 @@ let nondep_supertype env mid mty =
         if Path.isfree mid p then
           nondep_mty env va (Env.find_module p env).md_type
         else mty
-    | Mty_alias(_, _, Some mty) ->
-      nondep_mty env va mty
+    | Mty_alias(_, p, Some cmty) ->
+        if Path.isfree mid p then
+          nondep_mty env va cmty
+        else mty
     | Mty_signature sg ->
         Mty_signature(nondep_sig env va sg)
     | Mty_functor(param, arg, res) ->
@@ -242,8 +251,7 @@ let rec no_code_needed env mty =
     Mty_ident _ -> false
   | Mty_signature sg -> no_code_needed_sig env sg
   | Mty_functor(_, _, _) -> false
-  | Mty_alias(Mta_absent, _, None) -> true
-  | Mty_alias(Mta_absent, _, Some mty) -> no_code_needed env mty
+  | Mty_alias(Mta_absent, _, _) -> true
   | Mty_alias(Mta_present, _, _) -> false
 
 and no_code_needed_sig env sg =

@@ -300,8 +300,9 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
       in
       let mty1 = match omty1 with
-      | None -> Mtype.strengthen ~aliasable:true env (expand_module_alias env cxt p1) p1
-      | Some cmty -> Mtype.strengthen ~aliasable:true env cmty p1
+      | None -> Mtype.strengthen ~aliasable:`Aliasable env
+                  (expand_module_alias env cxt p1) p1
+      | Some cmty -> Mtype.strengthen ~aliasable:`Aliasable_with_constraints env cmty p1
       in
       let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
       match pres1 with
@@ -478,7 +479,7 @@ and module_declarations ~loc env cxt subst id1 md1 md2 =
   let p1 = Pident id1 in
   Env.mark_module_used env (Ident.name id1) md1.md_loc;
   modtypes ~loc env (Module id1::cxt) subst
-    (Mtype.strengthen ~aliasable:true env md1.md_type p1) md2.md_type
+    (Mtype.strengthen ~aliasable:`Aliasable env md1.md_type p1) md2.md_type
 
 (* Inclusion between module type specifications *)
 
@@ -577,7 +578,7 @@ let can_alias env path =
 
 let check_modtype_inclusion ~loc env mty1 path1 mty2 =
   try
-    let aliasable = can_alias env path1 in
+    let aliasable = if can_alias env path1 then `Aliasable else `Not_aliasable in
     ignore(modtypes ~loc env [] Subst.identity
                     (Mtype.strengthen ~aliasable env mty1 path1) mty2)
   with Error _ ->
