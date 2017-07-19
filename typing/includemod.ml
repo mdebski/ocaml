@@ -156,6 +156,44 @@ let is_runtime_component = function
   | Sig_module(_,_,_)
   | Sig_class(_, _,_) -> true
 
+(* Compose two coercions
+   apply_coercion c1 (apply_coercion c2 e) behaves like
+   apply_coercion (compose_coercions c1 c2) e. *)
+
+let rec compose_coercions c1 c2 =
+  match (c1, c2) with
+    (Tcoerce_none, c2) -> c2
+  | (c1, Tcoerce_none) -> c1
+  | (Tcoerce_structure (pc1, ids1), Tcoerce_structure (pc2, ids2)) ->
+      let v2 = Array.of_list pc2 in
+      let ids1 =
+        List.map (fun (id,pos1,c1) ->
+          let (pos2,c2) = v2.(pos1) in (id, pos2, compose_coercions c1 c2))
+          ids1
+      in
+      Tcoerce_structure
+        (List.map
+          (function (p1, Tcoerce_primitive p) ->
+                      (p1, Tcoerce_primitive p)
+                  | (p1, c1) ->
+                      let (p2, c2) = v2.(p1) in (p2, compose_coercions c1 c2))
+             pc1,
+         ids1 @ ids2)
+  | (Tcoerce_functor(arg1, res1), Tcoerce_functor(arg2, res2)) ->
+      Tcoerce_functor(compose_coercions arg2 arg1,
+                      compose_coercions res1 res2)
+  | (c1, Tcoerce_alias (path, c2)) ->
+      Tcoerce_alias (path, compose_coercions c1 c2)
+  | (_, _) ->
+      fatal_error "Includemod.compose_coercions"
+(*
+let compose_coercions c1 c2 =
+  let c3 = compose_coercions c1 c2 in
+  Format.eprintf "@[<2>compose_coercions@ (%a)@ (%a) =@ %a@]@."
+    print_coercion c1 print_coercion c2 print_coercion c3;
+  c3
+*)
+
 (* Print a coercion *)
 
 let rec print_list pr ppf = function
