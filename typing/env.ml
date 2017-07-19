@@ -607,6 +607,14 @@ let strengthen =
          aliasable:[`Aliasable | `Aliasable_with_constraints | `Not_aliasable] ->
          t -> module_type -> Path.t -> module_type)
 
+let realize_module_path =
+  ref ((fun ~loc:_ ~env:_ _ -> assert false) : (loc:Location.t -> env:t -> Path.t -> Path.t))
+let realize_value_path =
+  ref ((fun ~loc:_ ~env:_ _ -> assert false) : (loc:Location.t -> env:t -> Path.t -> Path.t))
+
+let realize_module_path_no_location = !realize_module_path ~loc:(Location.none)
+let realize_value_path_no_location = !realize_value_path ~loc:(Location.none)
+
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
 

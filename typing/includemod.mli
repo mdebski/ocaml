@@ -36,21 +36,6 @@ val compose_coercions: module_coercion -> module_coercion -> module_coercion
 val coerce_position: module_coercion -> int -> int * module_coercion
 val print_coercion: formatter -> module_coercion -> unit
 
-(*
-   Get a real path by which objects may be accessed.
-   _value_ -> treat last part as a value, do not modify it
-   _module -> treat last part as a module, possibly change it too if an alias
-
-   Unrolls aliases until a present one is found. May raise if some module is unavailable.
-
-   The latter variants are to be used only if no location is available.
-*)
-val realize_module_path: loc:Location.t -> env:Env.t -> Path.t -> Path.t
-val realize_value_path: loc:Location.t -> env:Env.t -> Path.t -> Path.t
-
-val realize_module_path_no_location: env:Env.t -> Path.t -> Path.t
-val realize_value_path_no_location: env:Env.t -> Path.t -> Path.t
-
 type symptom =
     Missing_field of Ident.t * Location.t * string (* kind *)
   | Value_descriptions of Ident.t * value_description * value_description

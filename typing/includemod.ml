@@ -558,14 +558,6 @@ and realize_get_coercion ~loc ~env mty omty _path = match omty with
     *)
     modtypes ~loc env [] Subst.identity mty cmty
 
-let realize_module_path ~loc ~env path =
-  fst (realize_module_path_with_coercion ~loc ~env path)
-let realize_value_path ~loc ~env path =
-  fst (realize_module_path_with_coercion ~loc ~env path)
-
-let realize_module_path_no_location = realize_module_path ~loc:(Location.none)
-let realize_value_path_no_location = realize_value_path ~loc:(Location.none)
-
 (* Simplified inclusion check between module types (for Env) *)
 
 let can_alias env path =
@@ -585,6 +577,11 @@ let check_modtype_inclusion ~loc env mty1 path1 mty2 =
     raise Not_found
 
 let _ = Env.check_modtype_inclusion := check_modtype_inclusion
+
+let () = Env.realize_module_path := fun ~loc ~env path ->
+  fst (realize_module_path_with_coercion ~loc ~env path)
+let () = Env.realize_value_path := fun ~loc ~env path ->
+  fst (realize_module_path_with_coercion ~loc ~env path)
 
 (* Check that an implementation of a compilation unit meets its
    interface. *)
