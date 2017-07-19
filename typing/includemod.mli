@@ -33,7 +33,6 @@ val type_declarations:
   Ident.t -> type_declaration -> type_declaration -> unit
 
 val compose_coercions: module_coercion -> module_coercion -> module_coercion
-val coerce_position: module_coercion -> int -> int * module_coercion
 val print_coercion: formatter -> module_coercion -> unit
 
 type symptom =
