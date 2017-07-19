@@ -100,7 +100,7 @@ let rec eval_path = function
 (* PR#7258: get rid of module aliases before evaluating paths *)
 
 let eval_path path =
-  eval_path (Includemod.realize_value_path_no_location ~env:Env.empty path)
+  eval_path (Env.realize_value_path_no_location ~env:Env.empty path)
 
 (* Install, remove a printer (as in toplevel/topdirs) *)
 
