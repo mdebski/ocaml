@@ -1084,7 +1084,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           (Env.add_required_global (Path.head path); md)
         else match (Env.find_module path env).md_type with
         | Mty_alias(_, p1, omty) when not alias ->
-            let p1 = Env.realize_module_path ~loc:smod.pmod_loc ~env p1 in
+            let p1 = Includemod.realize_module_path ~loc:smod.pmod_loc ~env p1 in
             let mty, add_constraints = match omty with
               | None -> Includemod.expand_module_alias env [] p1, false
               | Some cmty -> cmty, true

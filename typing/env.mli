@@ -90,20 +90,6 @@ val normalize_module_path: env:t -> Path.t -> Path.t
 (* TODO mdebski: WTF? *)
 val normalize_package_path: env:t -> Path.t -> Path.t
 
-(*
-   Get a real path by which value may be accessed.
-
-   Unrolls aliases until a present one is found. May raise if some module is unavailable.
-
-   The latter variants are to be used only if no location is available.
-*)
-val realize_module_path: loc:Location.t -> env:t -> Path.t -> Path.t
-val realize_value_path: loc:Location.t -> env:t -> Path.t -> Path.t
-
-val realize_module_path_no_location: env:t -> Path.t -> Path.t
-val realize_value_path_no_location: env:t -> Path.t -> Path.t
-
-
 val reset_required_globals: unit -> unit
 val get_required_globals: unit -> Ident.t list
 val add_required_global: Ident.t -> unit

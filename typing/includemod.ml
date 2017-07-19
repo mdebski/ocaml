@@ -286,18 +286,18 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         (* Should really be Tcoerce_empty if it existed *)
       | Mta_present, Mta_absent -> Tcoerce_none
       | Mta_absent, Mta_present ->
-        let p1 = try
-            Env.realize_module_path_no_location ~env p1
-          with Env.Error (Env.Missing_module (_, _, path)) ->
-            raise (Error[cxt, env, Unbound_module_path path])
+        let p1, _ = try
+          realize_module_path_with_coercion ~loc ~env p1
+        with Error _ ->
+          raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
         in
         Tcoerce_alias (p1, inner_coercion)
     end
   | (Mty_alias(pres1, p1, omty1), _) -> begin
-      let p1 = try
-        Env.realize_module_path_no_location ~env p1
-      with Env.Error (Env.Missing_module (_, _, path)) ->
-        raise (Error[cxt, env, Unbound_module_path path])
+      let p1, _ = try
+        realize_module_path_with_coercion ~loc ~env p1
+      with Error _ ->
+        raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
       in
       let mty1 = match omty1 with
       | None -> Mtype.strengthen ~aliasable:true env (expand_module_alias env cxt p1) p1
@@ -512,6 +512,58 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
       (* Format.eprintf "@[c1 = %a@ c2 = %a@]@."
         print_coercion _c1 print_coercion _c2; *)
       raise(Error [cxt, env, Modtype_permutation])
+
+(* realize path *)
+        (* TODO mdebski - we raise error without loc, remove loc? *)
+and realize_module_path_with_coercion ~loc ~env path =
+  (* TODO mdebski:
+     Was ~alias:true to find_module needed?
+  *)
+  match (Env.find_module path env).md_type with
+    (*
+       TODO mdebski:
+       Use find_module(alias_path) instead of mty?
+    *)
+  | Mty_alias(Mta_absent, alias_path, omty) as mty ->
+    let path', cc = realize_module_path_with_coercion ~loc ~env alias_path in
+    let cc' = realize_get_coercion ~loc ~env mty omty path' in
+    path', compose_coercions cc cc'
+  | Mty_alias(Mta_present, alias_path, omty) as mty ->
+    let cc = realize_get_coercion ~loc ~env mty omty alias_path in
+    alias_path, cc
+  | _ -> realize_value_path_with_coercion ~loc ~env path
+  | exception Not_found -> realize_handle_error ~env path
+
+and realize_value_path_with_coercion ~loc ~env path =
+  match path with
+  | Pident _ -> path, Tcoerce_none
+  | Papply _ -> assert false
+  | Pdot (parent_path, s, pos) ->
+    let parent_path', cc = realize_module_path_with_coercion ~loc ~env parent_path in
+    let pos', cc' = coerce_position cc pos in
+    Pdot (parent_path', s, pos'), cc'
+
+and realize_handle_error ~env path =
+  match path with
+  | Pident id when (not (Ident.persistent id)) -> path, Tcoerce_none
+  | Pident _ -> raise (Error[[], env, Unbound_module_path(path)])
+  | _ -> path, Tcoerce_none
+
+and realize_get_coercion ~loc ~env mty omty _path = match omty with
+  | None -> Tcoerce_none
+  | Some cmty ->
+    (* TODO mdebski: strengthen here?
+       Mtype.strengthen ~aliasable:true env cmty path
+    *)
+    modtypes ~loc env [] Subst.identity mty cmty
+
+let realize_module_path ~loc ~env path =
+  fst (realize_module_path_with_coercion ~loc ~env path)
+let realize_value_path ~loc ~env path =
+  fst (realize_module_path_with_coercion ~loc ~env path)
+
+let realize_module_path_no_location = realize_module_path ~loc:(Location.none)
+let realize_value_path_no_location = realize_value_path ~loc:(Location.none)
 
 (* Simplified inclusion check between module types (for Env) *)
 
