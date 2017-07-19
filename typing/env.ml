@@ -1032,6 +1032,53 @@ and normalize_value_path ~env path = match path with
                              normalize_module_path ~env p2)
   | _ -> path
 
+let realize_handle_error ~loc ~env path =
+  match path with
+  | Pident id when (not (Ident.persistent id)) -> path, Tcoerce_none
+  | Pident _ -> raise (Error(Missing_module(loc, path, normalize_module_path ~env path)))
+  | _ -> path, Tcoerce_none
+
+let realize_get_coercion ~loc ~env mty omty path = match omty with
+  | None -> Tcoerce_none
+  | Some cmty ->
+    (* TODO mdebski: strengthen here?
+       Mtype.strengthen ~aliasable:true env cmty path
+    *)
+    Includemod.modtypes ~loc env mty cmty
+
+let rec realize_module_path_with_coercion ~loc ~env path =
+  match (find_module ~alias:true path env).md_type with
+    (*
+       TODO mdebski:
+       Use find_module(alias_path) instead of mty?
+    *)
+  | Mty_alias(Mta_absent, alias_path, omty) as mty ->
+    let path', cc = realize_module_path_with_coercion ~loc ~env alias_path in
+    let cc' = realize_get_coercion ~loc ~env mty omty path' in
+    path', compose_coercions cc cc'
+  | Mty_alias(Mta_present, alias_path, omty) as mty ->
+    let cc = realize_get_coercion ~loc ~env mty omty alias_path in
+    alias_path, cc
+  | _ -> realize_value_path_with_coercion ~loc ~env path
+  | exception Not_found -> realize_handle_error ~loc ~env path
+
+and realize_value_path_with_coercion ~loc ~env path =
+  match path with
+  | Pident _ -> path, Tcoerce_none
+  | Papply _ -> assert false
+  | Pdot (parent_path, s, pos) ->
+    let parent_path', cc = realize_module_path_with_coercion ~loc ~env parent_path in
+    let pos', cc' = Includemod.coerce_position cc pos in
+    Pdot (parent_path', s, pos'), cc'
+
+let realize_module_path ~loc ~env path =
+  fst (realize_module_path_with_coercion ~loc ~env path)
+let realize_value_path ~loc ~env path =
+  fst (realize_module_path_with_coercion ~loc ~env path)
+
+let realize_module_path_no_location = realize_module_path ~loc:(Location.none)
+let realize_value_path_no_location = realize_value_path ~loc:(Location.none)
+
 (* for ctype, don't know what it really is *)
 let rec normalize_package_path ~env p =
   let t =
@@ -1048,17 +1095,6 @@ let rec normalize_package_path ~env p =
           if Path.same p1 p1' then p else
           normalize_package_path ~env (Path.Pdot (p1', s, n))
       | _ -> p
-
-let realize_module_path ~loc ~env path =
-  ignore (loc, env, path);
-  failwith "TODO mdebski"
-and realize_value_path ~loc ~env path =
-  ignore (loc, env, path);
-  failwith "TODO mdebski"
-
-let realize_module_path_no_location = realize_module_path ~loc:(Location.none)
-let realize_value_path_no_location = realize_value_path ~loc:(Location.none)
-
 
 let find_module = find_module ~alias:false
 

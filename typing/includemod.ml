@@ -194,6 +194,12 @@ let compose_coercions c1 c2 =
   c3
 *)
 
+let rec coerce_position cc pos = match cc with
+  | Tcoerce_none -> pos, Tcoerce_none
+  | Tcoerce_structure (ps, _) -> List.nth ps pos
+  | Tcoerce_alias (_, cc') -> coerce_position cc' pos
+  | _ -> assert false
+
 (* Print a coercion *)
 
 let rec print_list pr ppf = function
@@ -269,6 +275,7 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         if not (Path.same p1 p2) then raise Dont_match
       end;
       let inner_coercion = match omty1, omty2 with
+        (* TODO mdebski: is mty1 here ok? maybe (expand_module_alias env cxt p1)? *)
       | None, Some restr -> modtypes ~loc env cxt subst mty1 restr
       | Some restr1, Some restr2 -> modtypes ~loc env cxt subst restr1 restr2
       | _ ->  Tcoerce_none
