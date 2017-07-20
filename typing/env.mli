@@ -336,7 +336,7 @@ val fold_cltypes:
   Longident.t option -> t -> 'a -> 'a
 
 (** Utilities *)
-val scrape_alias: t -> module_type -> module_type
+val scrape_alias: ?strengthened:bool -> t -> module_type -> module_type
 val check_value_name: string -> Location.t -> unit
 
 module Persistent_signature : sig

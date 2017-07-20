@@ -259,7 +259,7 @@ let rec modtypes ~loc env cxt subst mty1 mty2 =
 
 and try_modtypes ~loc env cxt subst mty1 mty2 =
   match (mty1, mty2) with
-  | (Mty_alias(pres1, p1, omty1), Mty_alias(pres2, p2, _)) -> begin
+  | (Mty_alias(pres1, p1, omty1), Mty_alias(pres2, p2, omty2)) -> begin
       if Env.is_functor_arg p2 env then
         raise (Error[cxt, env, Invalid_module_alias p2]);
       if not (Path.same p1 p2) then begin
@@ -267,18 +267,24 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         and p2 = Env.normalize_module_path ~env (Subst.module_path subst p2) in
         if not (Path.same p1 p2) then raise Dont_match
       end;
-      let inner_cc = try
-        realize_alias ~loc ~env pres1 p1 omty1
-      with Error _ ->
-        let norm_path = Env.normalize_module_path ~env p1 in
-        raise (Error[cxt, env, Unbound_module_path norm_path])
-      in
-      let mty1 = Env.scrape_alias env mty1 in
-      let mty2 = Env.scrape_alias env (Subst.modtype subst mty2) in
-      let cc = modtypes ~loc env cxt subst mty1 mty2 in
-      match pres2 with
-      | Mta_absent -> Tcoerce_none
-      | Mta_present -> compose_coercions cc inner_cc
+      match omty1, omty2, pres2 with
+        | None, None, Mta_absent -> Tcoerce_none
+        | _ -> begin
+          let inner_cc = try
+            realize_alias ~loc ~env pres1 p1 omty1
+          with Error _ ->
+            let norm_path = Env.normalize_module_path ~env p1 in
+            raise (Error[cxt, env, Unbound_module_path norm_path])
+          in
+          let mty1 = Env.scrape_alias ~strengthened:false env mty1 in
+          let mty2 = Env.scrape_alias ~strengthened:false env
+                       (Subst.modtype subst mty2)
+          in
+          let cc = modtypes ~loc env cxt subst mty1 mty2 in
+          match pres2 with
+          | Mta_absent -> Tcoerce_none
+          | Mta_present -> compose_coercions cc inner_cc
+      end
     end
   | (Mty_alias(pres1, p1, omty1), _) -> begin
       let inner_cc = try

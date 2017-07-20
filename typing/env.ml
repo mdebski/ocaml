@@ -1584,26 +1584,30 @@ let may_find_module path env = try
     Some (find_module path env)
   with Not_found -> None
 
-let rec scrape_alias env ?path mty =
-  match mty, path with
-  | Mty_ident p, _ ->
+let rec scrape_alias env ?(strengthened=true) ?path mty =
+  match mty, path, strengthened with
+  | Mty_ident p, _, _ ->
     begin match (find_modtype p env).mtd_type with
-    | Some found_mty -> scrape_alias env found_mty ?path
+    | Some found_mty -> scrape_alias ~strengthened env found_mty ?path
     | None -> mty
     end
-  | Mty_alias(_, alias_path, None), _ ->
-      begin match may_find_module alias_path env with
-      | Some { md_type } -> scrape_alias env md_type ~path:alias_path
-      | None -> mty
+  | Mty_alias(_, alias_path, None), _, _ -> begin
+      match may_find_module alias_path env with
+        | Some { md_type } ->
+          scrape_alias ~strengthened env md_type ~path:alias_path
+        | None -> mty
       end
-  | Mty_alias(_, alias_path, Some cmty), _ ->
-    !strengthen ~aliasable:`Aliasable_with_constraints env cmty alias_path
-  | mty, Some path ->
-    !strengthen ~aliasable:`Aliasable env mty path
+  | Mty_alias(_, alias_path, Some cmty), _, true ->
+      !strengthen ~aliasable:`Aliasable_with_constraints env cmty alias_path
+  | Mty_alias(_, _, Some cmty), _, false ->
+      cmty
+  | mty, Some path, true ->
+      !strengthen ~aliasable:`Aliasable env mty path
   | _ -> mty
 ;;
 
-let scrape_alias env mty = scrape_alias env mty
+(* Hide optional path argument *)
+let scrape_alias ?strengthened env mty = scrape_alias ?strengthened env mty
 
 (* Given a signature and a root path, prefix all idents in the signature
    by the root path and build the corresponding substitution. *)
