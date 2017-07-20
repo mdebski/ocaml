@@ -804,7 +804,7 @@ module type B = sig type t val b : t end
 module type BA = sig type t val b : t val a : t end
 module M : AB
 val f : M.t -> M.t = <fun>
-module N = M :> A
+module N :> A = M
 - : M.t = <abstr>
 - : M.t = <abstr>
 Line _, characters 10-13:
@@ -831,9 +831,9 @@ let _ = f P.b
 [%%expect{|
 module M : ABC
 val f : M.t -> M.t = <fun>
-module N = M :> AB
-module O = N :> A
-module P = M :> A
+module N :> AB = M
+module O :> A = N
+module P :> A = M
 - : M.t = <abstr>
 - : M.t = <abstr>
 Line _, characters 10-13:
@@ -861,7 +861,7 @@ let bad : (GM.t -> GM.t) = (fun (x : GO.t) -> x)
 [%%expect{|
 module M : AB
 module G : functor (X : A) -> sig type t end
-module N = M :> A
+module N :> A = M
 module O : A
 module GM : sig type t = G(M).t end
 module GN : sig type t = G(N).t end
@@ -884,7 +884,7 @@ module F = functor (X : AB) -> struct end
 module Bad = F(N)
 [%%expect {|
 module M : AB
-module N = M :> A
+module N :> A = M
 module F : functor (X : AB) -> sig  end
 Line _, characters 15-16:
 Error: Signature mismatch:
@@ -921,7 +921,7 @@ let _ = O.b
 module type M_A = sig module Inner : A end
 module type M_AB = sig module Inner : AB end
 module M : M_AB
-module N = M :> M_A
+module N :> M_A = M
 module O = N.Inner
 - : O.t = <abstr>
 Line _, characters 8-11:
@@ -944,7 +944,7 @@ let _ = P.b
 [%%expect {|
 module M : AB
 module N = M
-module O = N :> A
+module O :> A = N
 module P = O
 - : P.t = <abstr>
 Line _, characters 8-11:
@@ -968,20 +968,12 @@ let y : M.t = P.b
 [%%expect {|
 module M : sig type t = int val a : int val b : int end
 module N = M
-module O = N :> B
+module O :> B = N
 module P = O
-module Q = N :> A
+module Q :> A = N
 val x : M.t = 1
 val y : M.t = 2
 |}]
-
-module type Ptype = sig
-  module L : BA
-  module N : sig
-    module O : AB
-  end
-  module X : BA
-end
 
 module M = struct
   module X = struct
@@ -989,28 +981,32 @@ module M = struct
     let a = 1
     let b = 2
   end
-  module L = X
-  module N = struct
-    module O = (L :> BA)
-  end
+  module Y = (X :> BA)
 end
 
-module P = (M :> Ptype)
+module type Mrev = sig
+  module X : AB
+  module Y : AB
+end
 
-let _ = P.N.O.a;;
-let _ = P.N.O.b;;
+module N = (M :> Mrev)
+
+let _ = M.Y.a
+let _ = N.Y.a
+let _ = M.Y.b
+let _ = N.Y.b
 
 [%%expect {|
-module type Ptype =
-  sig module L : BA module N : sig module O : AB end module X : BA end
 module M :
   sig
     module X : sig type t = int val a : int val b : int end
-    module L = X
-    module N : sig module O = L :> BA end
+    module Y :> BA = X
   end
-module P = M :> Ptype
-- : P.N.O.t = 1
-- : P.N.O.t = 2
+module type Mrev = sig module X : AB module Y : AB end
+module N :> Mrev = M
+- : M.Y.t = 1
+- : N.Y.t = 1
+- : M.Y.t = 2
+- : N.Y.t = 2
 |}]
 
