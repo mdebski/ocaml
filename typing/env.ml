@@ -612,8 +612,10 @@ let realize_module_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
 let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
                                 (loc:Location.t -> env:t -> Path.t -> Path.t))
 
-let realize_module_path_no_location = !realize_module_path ~loc:(Location.none)
-let realize_value_path_no_location = !realize_value_path ~loc:(Location.none)
+let realize_module_path_no_location ~env p =
+  !realize_module_path ~loc:(Location.none) ~env p
+let realize_value_path_no_location ~env p =
+  !realize_value_path ~loc:(Location.none) ~env p
 
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
