@@ -1010,3 +1010,40 @@ module N :> Mrev = M
 - : N.Y.t = 2
 |}]
 
+module M = struct
+  end
+
+module N = struct
+  let a = 3
+end
+
+module O = (N :> (module type of M))
+
+[%%expect {|
+module M :
+  TODO
+|}]
+
+module type AB = sig
+ val a : int
+ val b : int
+end
+
+module type BA = sig
+ val a : int
+ val b : int
+end
+
+module G(X:AB) = struct
+  module M :> BA = X
+end
+module M = G(struct let a = 1 and b = 2 end)
+
+let _ = M.M.a
+
+[%%expect {|
+  ...
+1
+
+
+|}]
