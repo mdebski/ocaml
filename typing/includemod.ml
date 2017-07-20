@@ -193,15 +193,6 @@ let compose_coercions c1 c2 =
     print_coercion c1 print_coercion c2 print_coercion c3;
   c3
 *)
-
-let rec coerce_position cc path name pos = match cc with
-  | Tcoerce_none -> Pdot(path, name, pos), Tcoerce_none
-  | Tcoerce_structure (ps, _) -> let pos', cc' = List.nth ps pos in
-    Pdot(path, name, pos'), cc'
-  | Tcoerce_alias (alias_path, cc') ->
-    coerce_position cc' alias_path name pos
-  | _ -> assert false
-
 (* Print a coercion *)
 
 let rec print_list pr ppf = function
@@ -268,7 +259,7 @@ let rec modtypes ~loc env cxt subst mty1 mty2 =
 
 and try_modtypes ~loc env cxt subst mty1 mty2 =
   match (mty1, mty2) with
-  | (Mty_alias(pres1, p1, omty1), Mty_alias(pres2, p2, omty2)) -> begin
+  | (Mty_alias(pres1, p1, omty1), Mty_alias(pres2, p2, _)) -> begin
       if Env.is_functor_arg p2 env then
         raise (Error[cxt, env, Invalid_module_alias p2]);
       if not (Path.same p1 p2) then begin
@@ -276,40 +267,27 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         and p2 = Env.normalize_module_path ~env (Subst.module_path subst p2) in
         if not (Path.same p1 p2) then raise Dont_match
       end;
-      let inner_coercion = match omty1, omty2 with
-        (* TODO mdebski: is mty1 here ok? maybe (expand_module_alias env cxt p1)? *)
-      | None, Some restr -> modtypes ~loc env cxt subst mty1 restr
-      | Some restr1, Some restr2 -> modtypes ~loc env cxt subst restr1 restr2
-      | _ ->  Tcoerce_none
-      in match pres1, pres2 with
-      | Mta_present, Mta_present -> inner_coercion
-        (* Should really be Tcoerce_ignore if it existed *)
-      | Mta_absent, Mta_absent -> Tcoerce_none
-        (* Should really be Tcoerce_empty if it existed *)
-      | Mta_present, Mta_absent -> Tcoerce_none
-      | Mta_absent, Mta_present ->
-        let p1, _ = try
-          realize_module_path_with_coercion ~loc ~env p1
-        with Error _ ->
-          raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
-        in
-        Tcoerce_alias (p1, inner_coercion)
-    end
-  | (Mty_alias(pres1, p1, omty1), _) -> begin
-      let p1, _ = try
-        realize_module_path_with_coercion ~loc ~env p1
+      let cc = try
+        realize_alias ~loc ~env pres1 p1 omty1
       with Error _ ->
         raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
       in
-      let mty1 = match omty1 with
-      | None -> Mtype.strengthen ~aliasable:`Aliasable env
-                  (expand_module_alias env cxt p1) p1
-      | Some cmty -> Mtype.strengthen ~aliasable:`Aliasable_with_constraints env cmty p1
-      in
+      let mty1 = Env.scrape_alias env mty1 in
+      let mty2 = Env.scrape_alias env mty2 in
       let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
-      match pres1 with
-      | Mta_present -> inner_coercion
-      | Mta_absent -> Tcoerce_alias (p1, inner_coercion)
+      match pres2 with
+      | Mta_absent -> Tcoerce_none
+      | Mta_present -> compose_coercions inner_coercion cc
+    end
+  | (Mty_alias(pres1, p1, omty1), _) -> begin
+      let cc = try
+        realize_alias ~loc ~env pres1 p1 omty1
+      with Error _ ->
+        raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
+      in
+      let mty1 = Env.scrape_alias env mty1 in
+      let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
+      compose_coercions inner_coercion cc
     end
   | (Mty_ident p1, _) when may_expand_module_path env p1 ->
       try_modtypes ~loc env cxt subst (expand_module_path env cxt p1) mty2
@@ -520,35 +498,54 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
 and realize_module_path_with_coercion ~loc ~env path =
   match (Env.find_module_alias path env).md_type with
   | Mty_alias(Mta_absent, alias_path, omty) ->
-    let path', cc = realize_module_path_with_coercion ~loc ~env alias_path in
-    let alias_mty = try
-        (Env.find_module_alias alias_path env).md_type
-      with Not_found -> raise (Env.Error (Env.Missing_module(loc, alias_path,
-                        (Env.normalize_module_path ~env alias_path))))
-    in
-    let cc' = realize_get_coercion ~loc ~env alias_mty omty path' in
-    path', compose_coercions cc' cc
+    realize_absent_alias ~loc ~env alias_path omty
   | _ ->
-    let path', cc = realize_value_path_with_coercion ~loc ~env path in
-    path', cc
+    realize_value_path_with_coercion ~loc ~env path
   | exception Not_found -> raise (Env.Error (Env.Missing_module(loc, path,
                            (Env.normalize_module_path ~env path))))
 
 and realize_value_path_with_coercion ~loc ~env path =
-  let path', cc' = match path with
-  | Pident _ -> path, Tcoerce_none
+  match path with
+  | Pident _ -> path, Tcoerce_none, Subst.identity
   | Papply _ -> assert false
-  | Pdot (parent_path, s, pos) ->
-    let parent_path', cc = realize_module_path_with_coercion ~loc ~env parent_path in
-    coerce_position cc parent_path' s pos
+  | Pdot (ppath, s, pos) ->
+    let ppath, cc, subst = realize_module_path_with_coercion ~loc ~env ppath
+    in coerce_position cc ppath s pos subst
+
+and realize_absent_alias ~loc ~env path omty =
+  let path, cc, subst = realize_module_path_with_coercion ~loc ~env path in
+  let mty = try
+      (Env.find_module_alias path env).md_type
+  with Not_found -> raise (Env.Error (Env.Missing_module(loc, path,
+                          (Env.normalize_module_path ~env path))))
   in
-  path', cc'
+  let cc' = realize_get_coercion ~loc ~env mty omty path in
+  path, (compose_coercions cc' cc), subst
+
+and realize_alias ~loc ~env pres path omty =
+  match pres with
+  | Mta_present -> Tcoerce_none
+  | Mta_absent ->
+    let path, cc, _ = realize_absent_alias ~loc ~env path omty in
+    Tcoerce_alias(path, cc)
 
 and realize_get_coercion ~loc ~env mty omty path = match omty with
   | None -> Tcoerce_none
   | Some cmty ->
     let mty' = Mtype.strengthen ~aliasable:`Aliasable_with_constraints env mty path in
     modtypes ~loc env [] Subst.identity mty' cmty
+
+and coerce_position cc path name pos subst = match cc with
+  | Tcoerce_none -> Pdot(path, name, pos), Tcoerce_none, subst
+  | Tcoerce_structure (ps, id_poslist) -> let pos', cc' = List.nth ps pos in
+    let subst = List.fold_left (fun acc (ident, pos, _cc) ->
+        Subst.add_module ident (Pdot(path, Ident.name ident, pos)) acc
+    ) subst id_poslist in
+    Pdot(path, name, pos'), cc', subst
+  | Tcoerce_alias (alias_path, cc') ->
+    let alias_path' = Subst.module_path subst alias_path in
+    coerce_position cc' alias_path' name pos subst
+  | _ -> assert false
 
 (* Simplified inclusion check between module types (for Env) *)
 
@@ -572,10 +569,10 @@ let _ = Env.check_modtype_inclusion := check_modtype_inclusion
 
 let () = Env.realize_module_path := fun ~loc ~env path ->
   Printf.printf "\n";
-  fst (realize_module_path_with_coercion ~loc ~env path)
+  fst3 (realize_module_path_with_coercion ~loc ~env path)
 let () = Env.realize_value_path := fun ~loc ~env path ->
   Printf.printf "\n";
-  fst (realize_value_path_with_coercion ~loc ~env path)
+  fst3 (realize_value_path_with_coercion ~loc ~env path)
 
 (* Check that an implementation of a compilation unit meets its
    interface. *)
