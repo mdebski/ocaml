@@ -267,27 +267,29 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         and p2 = Env.normalize_module_path ~env (Subst.module_path subst p2) in
         if not (Path.same p1 p2) then raise Dont_match
       end;
-      let cc = try
+      let inner_cc = try
         realize_alias ~loc ~env pres1 p1 omty1
       with Error _ ->
-        raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
+        let norm_path = Env.normalize_module_path ~env p1 in
+        raise (Error[cxt, env, Unbound_module_path norm_path])
       in
       let mty1 = Env.scrape_alias env mty1 in
       let mty2 = Env.scrape_alias env mty2 in
-      let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
+      let cc = modtypes ~loc env cxt subst mty1 mty2 in
       match pres2 with
       | Mta_absent -> Tcoerce_none
-      | Mta_present -> compose_coercions inner_coercion cc
+      | Mta_present -> compose_coercions cc inner_cc
     end
   | (Mty_alias(pres1, p1, omty1), _) -> begin
-      let cc = try
+      let inner_cc = try
         realize_alias ~loc ~env pres1 p1 omty1
       with Error _ ->
-        raise (Error[cxt, env, Unbound_module_path (Env.normalize_module_path ~env p1)])
+        let norm_path = Env.normalize_module_path ~env p1 in
+        raise (Error[cxt, env, Unbound_module_path norm_path])
       in
       let mty1 = Env.scrape_alias env mty1 in
-      let inner_coercion = modtypes ~loc env cxt subst mty1 mty2 in
-      compose_coercions inner_coercion cc
+      let cc = modtypes ~loc env cxt subst mty1 mty2 in
+      compose_coercions cc inner_cc
     end
   | (Mty_ident p1, _) when may_expand_module_path env p1 ->
       try_modtypes ~loc env cxt subst (expand_module_path env cxt p1) mty2
@@ -495,14 +497,16 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
       raise(Error [cxt, env, Modtype_permutation])
 
 (* realize path *)
+
 and realize_module_path_with_coercion ~loc ~env path =
   match (Env.find_module_alias path env).md_type with
   | Mty_alias(Mta_absent, alias_path, omty) ->
     realize_absent_alias ~loc ~env alias_path omty
   | _ ->
     realize_value_path_with_coercion ~loc ~env path
-  | exception Not_found -> raise (Env.Error (Env.Missing_module(loc, path,
-                           (Env.normalize_module_path ~env path))))
+  | exception Not_found ->
+    let norm_path = Env.normalize_module_path ~env path in
+    raise (Env.Error (Env.Missing_module(loc, path, norm_path)))
 
 and realize_value_path_with_coercion ~loc ~env path =
   match path with
@@ -510,17 +514,17 @@ and realize_value_path_with_coercion ~loc ~env path =
   | Papply _ -> assert false
   | Pdot (ppath, s, pos) ->
     let ppath, cc, subst = realize_module_path_with_coercion ~loc ~env ppath
-    in coerce_position cc ppath s pos subst
+    in coerce_position ~cc ~subst (ppath, s, pos)
 
 and realize_absent_alias ~loc ~env path omty =
-  let path, cc, subst = realize_module_path_with_coercion ~loc ~env path in
-  let mty = try
+  let path, inner_cc, subst = realize_module_path_with_coercion ~loc ~env path
+  in let mty = try
       (Env.find_module_alias path env).md_type
-  with Not_found -> raise (Env.Error (Env.Missing_module(loc, path,
-                          (Env.normalize_module_path ~env path))))
-  in
-  let cc' = realize_get_coercion ~loc ~env mty omty path in
-  path, (compose_coercions cc' cc), subst
+    with Not_found ->
+      let norm_path = Env.normalize_module_path ~env path in
+      raise (Env.Error (Env.Missing_module(loc, path, norm_path)))
+  in let cc = realize_get_coercion ~loc ~env mty omty path
+  in path, (compose_coercions cc inner_cc), subst
 
 and realize_alias ~loc ~env pres path omty =
   match pres with
@@ -532,19 +536,21 @@ and realize_alias ~loc ~env pres path omty =
 and realize_get_coercion ~loc ~env mty omty path = match omty with
   | None -> Tcoerce_none
   | Some cmty ->
-    let mty' = Mtype.strengthen ~aliasable:`Aliasable_with_constraints env mty path in
-    modtypes ~loc env [] Subst.identity mty' cmty
+    let aliasable = `Aliasable_with_constraints in
+    let mty = Mtype.strengthen ~aliasable env mty path in
+    modtypes ~loc env [] Subst.identity mty cmty
 
-and coerce_position cc path name pos subst = match cc with
+and coerce_position ~cc ~subst (path, name, pos) = match cc with
   | Tcoerce_none -> Pdot(path, name, pos), Tcoerce_none, subst
-  | Tcoerce_structure (ps, id_poslist) -> let pos', cc' = List.nth ps pos in
+  | Tcoerce_structure (ps, id_poslist) ->
+    let pos, inner_cc = List.nth ps pos in
     let subst = List.fold_left (fun acc (ident, pos, _cc) ->
         Subst.add_module ident (Pdot(path, Ident.name ident, pos)) acc
     ) subst id_poslist in
-    Pdot(path, name, pos'), cc', subst
-  | Tcoerce_alias (alias_path, cc') ->
-    let alias_path' = Subst.module_path subst alias_path in
-    coerce_position cc' alias_path' name pos subst
+    Pdot(path, name, pos), inner_cc, subst
+  | Tcoerce_alias (alias_path, inner_cc) ->
+    let alias_path = Subst.module_path subst alias_path in
+    coerce_position ~cc:inner_cc ~subst (alias_path, name, pos)
   | _ -> assert false
 
 (* Simplified inclusion check between module types (for Env) *)
@@ -559,8 +565,11 @@ let can_alias env path =
 
 let check_modtype_inclusion ~loc env mty1 path1 mty2 =
   try
-    let aliasable = if can_alias env path1 then `Aliasable else `Not_aliasable in
-    ignore(modtypes ~loc env [] Subst.identity
+    let aliasable = if can_alias env path1 then
+        `Aliasable
+      else
+        `Not_aliasable
+    in ignore(modtypes ~loc env [] Subst.identity
                     (Mtype.strengthen ~aliasable env mty1 path1) mty2)
   with Error _ ->
     raise Not_found
@@ -568,10 +577,8 @@ let check_modtype_inclusion ~loc env mty1 path1 mty2 =
 let _ = Env.check_modtype_inclusion := check_modtype_inclusion
 
 let () = Env.realize_module_path := fun ~loc ~env path ->
-  Printf.printf "\n";
   fst3 (realize_module_path_with_coercion ~loc ~env path)
 let () = Env.realize_value_path := fun ~loc ~env path ->
-  Printf.printf "\n";
   fst3 (realize_value_path_with_coercion ~loc ~env path)
 
 (* Check that an implementation of a compilation unit meets its
