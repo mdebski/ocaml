@@ -274,7 +274,7 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
         raise (Error[cxt, env, Unbound_module_path norm_path])
       in
       let mty1 = Env.scrape_alias env mty1 in
-      let mty2 = Env.scrape_alias env mty2 in
+      let mty2 = Env.scrape_alias env (Subst.modtype subst mty2) in
       let cc = modtypes ~loc env cxt subst mty1 mty2 in
       match pres2 with
       | Mta_absent -> Tcoerce_none
