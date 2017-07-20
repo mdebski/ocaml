@@ -226,14 +226,16 @@ let merge_constraint initial_env loc sg constr =
       when Ident.name id = s ->
         let path, md' = Typetexp.find_module initial_env loc lid'.txt in
         let md'' = {md' with md_type = Mtype.remove_aliases env md'.md_type} in
-        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md'' path in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
+                      path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         (Pident id, lid, Twith_module (path, lid')),
         Sig_module(id, newmd, rs) :: rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_modsubst (_, lid'))
       when Ident.name id = s ->
         let path, md' = Typetexp.find_module initial_env loc lid'.txt in
-        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md' path in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md'
+                      path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         real_id := Some id;
         (Pident id, lid, Twith_modsubst (path, lid')),

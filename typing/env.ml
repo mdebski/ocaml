@@ -604,13 +604,13 @@ let check_modtype_inclusion =
 let strengthen =
   (* to be filled with Mtype.strengthen *)
   ref ((fun ~aliasable:_ _env _mty _path -> assert false) :
-         aliasable:[`Aliasable | `Aliasable_with_constraints | `Not_aliasable] ->
-         t -> module_type -> Path.t -> module_type)
+       aliasable:[`Aliasable | `Aliasable_with_constraints | `Not_aliasable] ->
+       t -> module_type -> Path.t -> module_type)
 
-let realize_module_path =
-  ref ((fun ~loc:_ ~env:_ _ -> assert false) : (loc:Location.t -> env:t -> Path.t -> Path.t))
-let realize_value_path =
-  ref ((fun ~loc:_ ~env:_ _ -> assert false) : (loc:Location.t -> env:t -> Path.t -> Path.t))
+let realize_module_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
+                                 (loc:Location.t -> env:t -> Path.t -> Path.t))
+let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
+                                (loc:Location.t -> env:t -> Path.t -> Path.t))
 
 let realize_module_path_no_location = !realize_module_path ~loc:(Location.none)
 let realize_value_path_no_location = !realize_value_path ~loc:(Location.none)
@@ -1023,8 +1023,9 @@ let add_required_global id =
   then required_globals := id :: !required_globals
 
 (* Simplify path by resolving aliases whenever possible.
-   normalize_module_path -> treat last part as a module, simplify prefix and then simplify
-                            last part if it is an alias.
+   normalize_module_path ->
+     treat last part as a module, simplify prefix and then simplify last part
+     if it is an alias.
    normalize_value_path -> treat last part as a value, simplify just prefix.
 *)
 let rec normalize_module_path ~env path =

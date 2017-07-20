@@ -2199,7 +2199,8 @@ let add_type_equality t1 t2 =
 
 let eq_package_path env p1 p2 =
   Path.same p1 p2 ||
-  Path.same (Env.normalize_package_path ~env p1) (Env.normalize_package_path ~env p2)
+  Path.same (Env.normalize_package_path ~env p1)
+    (Env.normalize_package_path ~env p2)
 
 let nondep_type' = ref (fun _ _ _ -> assert false)
 let package_subtype = ref (fun _ _ _ _ _ _ _ -> assert false)

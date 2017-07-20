@@ -532,7 +532,8 @@ module MakeMap(Map : MapArgument) = struct
                            Tmodtype_explicit (map_module_type mtype),
                            coercion)
         | Tmod_tconstraint (mexpr, mtype, coercion) ->
-          Tmod_tconstraint (map_module_expr mexpr, map_module_type mtype, coercion)
+          Tmod_tconstraint (map_module_expr mexpr, map_module_type mtype,
+                            coercion)
         | Tmod_unpack (exp, mod_type) ->
           Tmod_unpack (map_expression exp, mod_type)
     in

@@ -96,7 +96,8 @@ val normalize_package_path: env:t -> Path.t -> Path.t
    _value_ -> treat last part as a value, do not modify it
    _module -> treat last part as a module, possibly change it too if an alias
 
-   Unrolls aliases until a present one is found. May raise if some module is unavailable.
+   Unrolls aliases until a present one is found. May raise if some module is
+   unavailable.
 
    Forward declarations, defined in includemod
 *)

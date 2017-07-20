@@ -575,9 +575,9 @@ let () =
          | None -> md.md_type
          | Some cmty -> cmty
          in
-         let just_module = Sig_module (id, {md with md_type = trim_signature mty},
-                                       Trec_not) in
-         match md.md_type, constr with
+         let just_module =
+           Sig_module (id, {md with md_type = trim_signature mty}, Trec_not)
+         in match md.md_type, constr with
          | Mty_alias(_, path, constr2), None ->
            accum_aliases path ?constr:constr2 (just_module :: acc)
          | Mty_alias(_, path, _), Some _ ->
