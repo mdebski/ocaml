@@ -798,7 +798,7 @@ class texi =
         | { m_name = name } -> name in
       let constr = match m.m_kind with
         | Module_alias { ma_constraint = Some mty } ->
-          Raw (" :> " ^ Odoc_info.string_of_module_type mty)
+          Raw (" <: " ^ Odoc_info.string_of_module_type mty)
         | _ -> Raw ""
       in
       let t =

@@ -532,7 +532,7 @@ class virtual to_text =
         ) in
         let constr = (match m_alias.ma_constraint with
           | None -> []
-          | Some mty -> [Code " :> "] @ self#text_of_module_type mty
+          | Some mty -> [Code " <: "] @ self#text_of_module_type mty
         ) in alias_name @ constr
       | Module_apply (k1, k2) ->
           (if with_def_syntax then [Code " = "] else []) @

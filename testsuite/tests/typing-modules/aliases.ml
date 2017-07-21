@@ -790,7 +790,7 @@ end
 
 let f (x : M.t) : M.t = x
 
-module N = (M :> A)
+module N = (M <: A)
 
 let _ = f N.a
 let _ = f M.b
@@ -804,7 +804,7 @@ module type B = sig type t val b : t end
 module type BA = sig type t val b : t val a : t end
 module M : AB
 val f : M.t -> M.t = <fun>
-module N :> A = M
+module N <: A = M
 - : M.t = <abstr>
 - : M.t = <abstr>
 Line _, characters 10-13:
@@ -820,10 +820,10 @@ end
 
 let f (x : M.t) : M.t = x
 
-module N = (M :> AB)
-module O = (N :> A)
+module N = (M <: AB)
+module O = (N <: A)
 
-module P = ((M :> AB) :> A)
+module P = ((M <: AB) <: A)
 
 let _ = f O.a
 let _ = f P.a
@@ -831,9 +831,9 @@ let _ = f P.b
 [%%expect{|
 module M : ABC
 val f : M.t -> M.t = <fun>
-module N :> AB = M
-module O :> A = N
-module P :> A = M
+module N <: AB = M
+module O <: A = N
+module P <: A = M
 - : M.t = <abstr>
 - : M.t = <abstr>
 Line _, characters 10-13:
@@ -848,7 +848,7 @@ end
 
 module G = functor (X : A) -> struct type t end
 
-module N = (M :> A)
+module N = (M <: A)
 module O = (M : A)
 
 module GM = G(M)
@@ -861,7 +861,7 @@ let bad : (GM.t -> GM.t) = (fun (x : GO.t) -> x)
 [%%expect{|
 module M : AB
 module G : functor (X : A) -> sig type t end
-module N :> A = M
+module N <: A = M
 module O : A
 module GM : sig type t = G(M).t end
 module GN : sig type t = G(N).t end
@@ -878,13 +878,13 @@ module M : AB = struct
   let b = ()
 end
 
-module N = (M :> A)
+module N = (M <: A)
 
 module F = functor (X : AB) -> struct end
 module Bad = F(N)
 [%%expect {|
 module M : AB
-module N :> A = M
+module N <: A = M
 module F : functor (X : AB) -> sig  end
 Line _, characters 15-16:
 Error: Signature mismatch:
@@ -911,7 +911,7 @@ module M : M_AB = struct
   end
 end
 
-module N = (M :> M_A)
+module N = (M <: M_A)
 module O = N.Inner
 
 let _ : M.Inner.t = O.a
@@ -921,7 +921,7 @@ let _ = O.b
 module type M_A = sig module Inner : A end
 module type M_AB = sig module Inner : AB end
 module M : M_AB
-module N :> M_A = M
+module N <: M_A = M
 module O = N.Inner
 - : O.t = <abstr>
 Line _, characters 8-11:
@@ -935,7 +935,7 @@ module M : AB = struct
 end
 
 module N = M
-module O = (N :> A)
+module O = (N <: A)
 module P = O
 
 let _ : M.t = P.a
@@ -944,7 +944,7 @@ let _ = P.b
 [%%expect {|
 module M : AB
 module N = M
-module O :> A = N
+module O <: A = N
 module P = O
 - : P.t = <abstr>
 Line _, characters 8-11:
@@ -958,9 +958,9 @@ module M = struct
 end
 
 module N = M
-module O = (N :> B)
+module O = (N <: B)
 module P = O
-module Q = (N :> A)
+module Q = (N <: A)
 
 let x : M.t = Q.a
 let y : M.t = P.b
@@ -968,9 +968,9 @@ let y : M.t = P.b
 [%%expect {|
 module M : sig type t = int val a : int val b : int end
 module N = M
-module O :> B = N
+module O <: B = N
 module P = O
-module Q :> A = N
+module Q <: A = N
 val x : M.t = 1
 val y : M.t = 2
 |}]
@@ -981,7 +981,7 @@ module M = struct
     let a = 1
     let b = 2
   end
-  module Y = (X :> BA)
+  module Y = (X <: BA)
 end
 
 module type Mrev = sig
@@ -989,7 +989,7 @@ module type Mrev = sig
   module Y : AB
 end
 
-module N = (M :> Mrev)
+module N = (M <: Mrev)
 
 let _ = M.Y.a
 let _ = N.Y.a
@@ -1000,10 +1000,10 @@ let _ = N.Y.b
 module M :
   sig
     module X : sig type t = int val a : int val b : int end
-    module Y :> BA = X
+    module Y <: BA = X
   end
 module type Mrev = sig module X : AB module Y : AB end
-module N :> Mrev = M
+module N <: Mrev = M
 - : M.Y.t = 1
 - : N.Y.t = 1
 - : M.Y.t = 2
@@ -1017,12 +1017,12 @@ module N = struct
   let a = 3
 end
 
-module O = (N :> (module type of M))
+module O = (N <: (module type of M))
 
 [%%expect {|
 module M : sig  end
 module N : sig val a : int end
-module O :> sig  end = N
+module O <: sig  end = N
 |}]
 
 module type AB = sig
@@ -1036,7 +1036,7 @@ module type BA = sig
 end
 
 module G(X:AB) = struct
-  module M = ((X :> BA) :> AB)
+  module M = ((X <: BA) <: AB)
 end
 module M = G(struct let a = 1 and b = 2 end)
 

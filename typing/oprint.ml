@@ -405,7 +405,7 @@ and print_out_module_type ppf =
       fprintf ppf "@[<hv 2>sig@ %a@;<1 -2>end@]" !out_signature sg
   | Omty_alias (id, None) -> fprintf ppf "(module %a)" print_ident id
   | Omty_alias (id, Some mty) ->
-    fprintf ppf "(module %a :> %a)" print_ident id print_out_module_type mty
+    fprintf ppf "(module %a <: %a)" print_ident id print_out_module_type mty
 and print_out_signature ppf =
   function
     [] -> ()
@@ -458,7 +458,7 @@ and print_out_sig_item ppf =
   | Osig_module (name, Omty_alias (id, None), _) ->
       fprintf ppf "@[<2>module %s =@ %a@]" name print_ident id
   | Osig_module (name, Omty_alias (id, Some mty), _) ->
-      fprintf ppf "@[<2>module %s :>@ %a@ =@ %a@]" name !out_module_type mty
+      fprintf ppf "@[<2>module %s <:@ %a@ =@ %a@]" name !out_module_type mty
         print_ident id
   | Osig_module (name, mty, rs) ->
       fprintf ppf "@[<2>%s %s :@ %a@]"

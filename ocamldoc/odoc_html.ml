@@ -1362,7 +1362,7 @@ class html =
       | Module_alias {ma_name; ma_constraint = Some mty; _ } ->
           bs b "<code class=\"type\">";
           bs b (self#create_fully_qualified_module_idents_links father ma_name);
-          self#html_of_text b [Code " :> "];
+          self#html_of_text b [Code " <: "];
           self#html_of_module_type b father mty;
           bs b "</code>"
       | Module_functor (p, k) ->

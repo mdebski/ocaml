@@ -809,7 +809,7 @@ class latex =
       | Module_alias { ma_name; ma_constraint = Some mty; _ } ->
           self#latex_of_text fmt (
             [Code (self#relative_module_idents father ma_name);
-             Code " :> ";
+             Code " <: ";
              Code (Odoc_info.string_of_module_type mty)
             ])
       | Module_functor (p, k) ->

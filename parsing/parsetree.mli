@@ -789,7 +789,7 @@ and module_expr_desc =
   | Pmod_constraint of module_expr * module_type
         (* (ME : MT) *)
   | Pmod_tconstraint of module_expr * module_type
-        (* (ME :> MT) *)
+        (* (ME <: MT) *)
   | Pmod_unpack of expression
         (* (val E) *)
   | Pmod_extension of extension

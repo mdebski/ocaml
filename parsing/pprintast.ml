@@ -1061,7 +1061,7 @@ and module_expr ctxt f x =
           (module_expr ctxt) me
           (module_type ctxt) mt
     | Pmod_tconstraint (me, mt) ->
-        pp f "@[<hov2>(%a@ :>@ %a)@]"
+        pp f "@[<hov2>(%a@ <:@ %a)@]"
           (module_expr ctxt) me
           (module_type ctxt) mt
     | Pmod_ident (li) ->
