@@ -221,7 +221,7 @@ and pattern_desc =
   | Ppat_extension of extension
         (* [%id] *)
   | Ppat_open of open_expr * pattern
-        (* M.(P) *)
+        (* OE.(P) *)
 
 (* Value expressions *)
 
@@ -343,9 +343,9 @@ and expression_desc =
            (module ME : S) is represented as
            Pexp_constraint(Pexp_pack, Ptyp_package S) *)
   | Pexp_open of override_flag * open_expr * expression
-        (* M.(E)
-           let open M in E
-           let! open M in E *)
+        (* OE.(E)
+           let open OE in E
+           let! open OE in E *)
   | Pexp_extension of extension
         (* [%id] *)
   | Pexp_unreachable
@@ -502,7 +502,7 @@ and class_type_desc =
   | Pcty_extension of extension
         (* [%id] *)
   | Pcty_open of override_flag * open_expr * class_type
-        (* let open M in CT *)
+        (* let open OE in CT *)
 
 and class_signature =
     {
@@ -594,7 +594,7 @@ and class_expr_desc =
   | Pcl_extension of extension
   (* [%id] *)
   | Pcl_open of override_flag * open_expr * class_expr
-  (* let open M in CE *)
+  (* let open OE in CE *)
 
 
 and class_structure =
@@ -733,6 +733,9 @@ and module_type_declaration =
 and open_expr =
   | Popen_lid of Longident.t loc
   | Popen_tconstraint of Longident.t loc * module_type
+(* M           - Popen_lid M
+   (M :> MT)   - Popen_tconstraint(M, MT)
+*)
 
 and open_description =
     {

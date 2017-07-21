@@ -38,7 +38,7 @@ type pattern =
 and pat_extra =
   | Tpat_constraint of core_type
   | Tpat_type of Path.t * Longident.t loc
-  | Tpat_open of Path.t * Longident.t loc * Env.t
+  | Tpat_open of open_expr * Env.t
   | Tpat_unpack
 
 and pattern_desc =
@@ -69,7 +69,7 @@ and expression =
 and exp_extra =
   | Texp_constraint of core_type
   | Texp_coerce of core_type option * core_type
-  | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
+  | Texp_open of override_flag * open_expr * Env.t
   | Texp_poly of core_type option
   | Texp_newtype of string
 
@@ -153,7 +153,7 @@ and class_expr_desc =
   | Tcl_constraint of
       class_expr * class_type option * string list * string list * Concr.t
     (* Visible instance variables, methods and concretes methods *)
-  | Tcl_open of override_flag * Path.t * Longident.t loc * Env.t * class_expr
+  | Tcl_open of override_flag * open_expr * Env.t * class_expr
 
 and class_structure =
   {
@@ -332,12 +332,15 @@ and module_type_declaration =
 
 and open_description =
     {
-     open_path: Path.t;
-     open_txt: Longident.t loc;
+     open_expr: open_expr;
      open_override: override_flag;
      open_loc: Location.t;
      open_attributes: attribute list;
     }
+
+and open_expr =
+  | Topen_lid of Path.t * Longident.t loc
+  | Topen_tconstraint of Path.t * Longident.t loc * module_type
 
 and 'a include_infos =
     {
@@ -480,7 +483,7 @@ and class_type_desc =
     Tcty_constr of Path.t * Longident.t loc * core_type list
   | Tcty_signature of class_signature
   | Tcty_arrow of arg_label * core_type * class_type
-  | Tcty_open of override_flag * Path.t * Longident.t loc * Env.t * class_type
+  | Tcty_open of override_flag * open_expr * Env.t * class_type
 
 and class_signature = {
     csig_self: core_type;
