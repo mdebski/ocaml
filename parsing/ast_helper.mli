@@ -106,7 +106,7 @@ module Pat:
     val type_: ?loc:loc -> ?attrs:attrs -> lid -> pattern
     val lazy_: ?loc:loc -> ?attrs:attrs -> pattern -> pattern
     val unpack: ?loc:loc -> ?attrs:attrs -> str -> pattern
-    val open_: ?loc:loc -> ?attrs:attrs  -> lid -> pattern -> pattern
+    val open_: ?loc:loc -> ?attrs:attrs  -> open_expr -> pattern -> pattern
     val exception_: ?loc:loc -> ?attrs:attrs -> pattern -> pattern
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> pattern
   end
@@ -169,8 +169,8 @@ module Exp:
     val object_: ?loc:loc -> ?attrs:attrs -> class_structure -> expression
     val newtype: ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
     val pack: ?loc:loc -> ?attrs:attrs -> module_expr -> expression
-    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression
-               -> expression
+    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> open_expr
+               -> expression -> expression
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> expression
     val unreachable: ?loc:loc -> ?attrs:attrs -> unit -> expression
 
@@ -325,7 +325,7 @@ module Mb:
 module Opn:
   sig
     val mk: ?loc: loc -> ?attrs:attrs -> ?docs:docs ->
-      ?override:override_flag -> lid -> open_description
+      ?override:override_flag -> open_expr -> open_description
   end
 
 (** Includes *)
@@ -355,8 +355,8 @@ module Cty:
     val arrow: ?loc:loc -> ?attrs:attrs -> arg_label -> core_type ->
       class_type -> class_type
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> class_type
-    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> class_type
-               -> class_type
+    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> open_expr
+               -> class_type -> class_type
   end
 
 (** Class type fields *)
@@ -395,8 +395,8 @@ module Cl:
     val constraint_: ?loc:loc -> ?attrs:attrs -> class_expr -> class_type ->
       class_expr
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> class_expr
-    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> class_expr
-               -> class_expr
+    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> open_expr
+               -> class_expr -> class_expr
   end
 
 (** Class fields *)

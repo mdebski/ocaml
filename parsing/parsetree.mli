@@ -220,7 +220,7 @@ and pattern_desc =
         (* exception P *)
   | Ppat_extension of extension
         (* [%id] *)
-  | Ppat_open of Longident.t loc * pattern
+  | Ppat_open of open_expr * pattern
         (* M.(P) *)
 
 (* Value expressions *)
@@ -342,7 +342,7 @@ and expression_desc =
 
            (module ME : S) is represented as
            Pexp_constraint(Pexp_pack, Ptyp_package S) *)
-  | Pexp_open of override_flag * Longident.t loc * expression
+  | Pexp_open of override_flag * open_expr * expression
         (* M.(E)
            let open M in E
            let! open M in E *)
@@ -501,7 +501,7 @@ and class_type_desc =
          *)
   | Pcty_extension of extension
         (* [%id] *)
-  | Pcty_open of override_flag * Longident.t loc * class_type
+  | Pcty_open of override_flag * open_expr * class_type
         (* let open M in CT *)
 
 and class_signature =
@@ -593,7 +593,7 @@ and class_expr_desc =
         (* (CE : CT) *)
   | Pcl_extension of extension
   (* [%id] *)
-  | Pcl_open of override_flag * Longident.t loc * class_expr
+  | Pcl_open of override_flag * open_expr * class_expr
   (* let open M in CE *)
 
 
@@ -730,9 +730,13 @@ and module_type_declaration =
    S       (abstract module type declaration, pmtd_type = None)
 *)
 
+and open_expr =
+  | Popen_lid of Longident.t loc
+  | Popen_tconstraint of Longident.t loc * module_type
+
 and open_description =
     {
-     popen_lid: Longident.t loc;
+     popen_expr: open_expr;
      popen_override: override_flag;
      popen_loc: Location.t;
      popen_attributes: attributes;
