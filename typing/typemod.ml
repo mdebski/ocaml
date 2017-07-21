@@ -83,17 +83,18 @@ let extract_sig_open env loc mty =
 (* Compute the environment after opening a module *)
 
 let type_open_ ?used_slot ?toplevel ovf env loc oexpr =
-  ignore(used_slot, toplevel, ovf, env, loc, oexpr);
-  failwith "TODO mdebski"
-  (*
-  let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
-  match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
-  | Some env -> path, env
-  | None ->
-      let md = Env.find_module path env in
-      ignore (extract_sig_open env lid.loc md.md_type);
-      assert false
-     *)
+  match oexpr with
+  | Popen_lid lid -> begin
+    let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
+    match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
+    | Some env -> Topen_lid(path, lid), env
+    | None ->
+        let md = Env.find_module path env in
+        ignore (extract_sig_open env lid.loc md.md_type);
+        assert false
+    end
+  | Popen_tconstraint(_lid, _mty) ->
+      failwith "TODO mdebski: implement type_open_ for open M :> S"
 
 let type_open ?toplevel env sod =
   let (oexpr, newenv) =
