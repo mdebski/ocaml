@@ -82,7 +82,10 @@ let extract_sig_open env loc mty =
 
 (* Compute the environment after opening a module *)
 
-let type_open_ ?used_slot ?toplevel ovf env loc lid =
+let type_open_ ?used_slot ?toplevel ovf env loc oexpr =
+  ignore(used_slot, toplevel, ovf, env, loc, oexpr);
+  failwith "TODO mdebski"
+  (*
   let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
   match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
   | Some env -> path, env
@@ -90,21 +93,21 @@ let type_open_ ?used_slot ?toplevel ovf env loc lid =
       let md = Env.find_module path env in
       ignore (extract_sig_open env lid.loc md.md_type);
       assert false
+     *)
 
 let type_open ?toplevel env sod =
-  let (path, newenv) =
-    type_open_ ?toplevel sod.popen_override env sod.popen_loc sod.popen_lid
+  let (oexpr, newenv) =
+    type_open_ ?toplevel sod.popen_override env sod.popen_loc sod.popen_expr
   in
   let od =
     {
       open_override = sod.popen_override;
-      open_path = path;
-      open_txt = sod.popen_lid;
+      open_expr = oexpr;
       open_attributes = sod.popen_attributes;
       open_loc = sod.popen_loc;
     }
   in
-  (path, newenv, od)
+  (oexpr, newenv, od)
 
 (* Record a module type *)
 let rm node =
