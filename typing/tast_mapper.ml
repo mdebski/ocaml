@@ -17,7 +17,7 @@ open Asttypes
 open Typedtree
 
 (* TODO: add 'methods' for location, attribute, extension,
-   open_description, include_declaration, include_description *)
+   include_declaration, include_description *)
 
 type mapper =
   {
@@ -44,6 +44,8 @@ type mapper =
     module_type: mapper -> module_type -> module_type;
     module_type_declaration:
       mapper -> module_type_declaration -> module_type_declaration;
+    open_description: mapper -> open_description -> open_description;
+    open_expr: mapper -> open_expr -> open_expr;
     package_type: mapper -> package_type -> package_type;
     pat: mapper -> pattern -> pattern;
     row_field: mapper -> row_field -> row_field;
@@ -124,10 +126,19 @@ let structure_item sub {str_desc; str_loc; str_env} =
           (List.map (tuple3 id id (sub.class_type_declaration sub)) list)
     | Tstr_include incl ->
         Tstr_include (include_infos (sub.module_expr sub) incl)
-    | Tstr_open _
+    | Tstr_open od -> Tstr_open(sub.open_description sub od)
     | Tstr_attribute _ as d -> d
   in
   {str_desc; str_env; str_loc}
+
+let open_expr sub oe = match oe with
+  | Topen_lid _ -> oe
+  | Topen_tconstraint(p, lid, mty) ->
+      Topen_tconstraint(p, lid, sub.module_type sub mty)
+
+let open_description (sub : mapper) (od : open_description) =
+  let open_expr = (sub.open_expr sub od.open_expr) in
+  { od with open_expr}
 
 let value_description sub x =
   let val_desc = sub.typ sub x.val_desc in
@@ -186,7 +197,7 @@ let pat sub x =
   let extra = function
     | Tpat_type _
     | Tpat_unpack as d -> d
-    | Tpat_open (path,loc,env) ->  Tpat_open (path, loc, sub.env sub env)
+    | Tpat_open (oe, env) ->  Tpat_open (sub.open_expr sub oe, sub.env sub env)
     | Tpat_constraint ct -> Tpat_constraint (sub.typ sub ct)
   in
   let pat_env = sub.env sub x.pat_env in
@@ -216,8 +227,8 @@ let expr sub x =
         Texp_constraint (sub.typ sub cty)
     | Texp_coerce (cty1, cty2) ->
         Texp_coerce (opt (sub.typ sub) cty1, sub.typ sub cty2)
-    | Texp_open (ovf, path, loc, env) ->
-        Texp_open (ovf, path, loc, sub.env sub env)
+    | Texp_open (ovf, oe, env) ->
+        Texp_open (ovf, sub.open_expr sub oe, sub.env sub env)
     | Texp_newtype _ as d -> d
     | Texp_poly cto -> Texp_poly (opt (sub.typ sub) cto)
   in
@@ -387,7 +398,7 @@ let signature_item sub x =
     | Tsig_class_type list ->
         Tsig_class_type
           (List.map (sub.class_type_declaration sub) list)
-    | Tsig_open _
+    | Tsig_open od -> Tsig_open(sub.open_description sub od)
     | Tsig_attribute _ as d -> d
   in
   {x with sig_desc; sig_env}
@@ -527,8 +538,9 @@ let class_expr sub x =
         )
     | Tcl_ident (path, lid, tyl) ->
         Tcl_ident (path, lid, List.map (sub.typ sub) tyl)
-    | Tcl_open (ovf, p, lid, env, e) ->
-        Tcl_open (ovf, p, lid, sub.env sub env, sub.class_expr sub e)
+    | Tcl_open (ovf, oe, env, e) ->
+        Tcl_open (ovf, sub.open_expr sub oe, sub.env sub env,
+                  sub.class_expr sub e)
   in
   {x with cl_desc; cl_env}
 
@@ -549,8 +561,9 @@ let class_type sub x =
            sub.typ sub ct,
            sub.class_type sub cl
           )
-    | Tcty_open (ovf, p, lid, env, e) ->
-        Tcty_open (ovf, p, lid, sub.env sub env, sub.class_type sub e)
+    | Tcty_open (ovf, oe, env, e) ->
+        Tcty_open (ovf, sub.open_expr sub oe, sub.env sub env,
+                   sub.class_type sub e)
   in
   {x with cltyp_desc; cltyp_env}
 
@@ -683,6 +696,8 @@ let default =
     module_expr;
     module_type;
     module_type_declaration;
+    open_description;
+    open_expr;
     package_type;
     pat;
     row_field;

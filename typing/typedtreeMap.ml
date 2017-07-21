@@ -129,7 +129,8 @@ module MakeMap(Map : MapArgument) = struct
           Tstr_recmodule list
         | Tstr_modtype mtd ->
           Tstr_modtype (map_module_type_declaration mtd)
-        | Tstr_open od -> Tstr_open od
+        | Tstr_open od ->
+          Tstr_open {od with open_expr = map_open_expr od.open_expr}
         | Tstr_class list ->
           let list =
             List.map
@@ -258,8 +259,10 @@ module MakeMap(Map : MapArgument) = struct
   and map_pat_extra pat_extra =
     match pat_extra with
       | Tpat_constraint ct, loc, attrs ->
-          (Tpat_constraint (map_core_type  ct), loc, attrs)
-      | (Tpat_type _ | Tpat_unpack | Tpat_open _ ), _, _ -> pat_extra
+          Tpat_constraint (map_core_type  ct), loc, attrs
+      | (Tpat_type _ | Tpat_unpack ), _, _ -> pat_extra
+      | Tpat_open(oe, env), loc, attrs ->
+          Tpat_open(map_open_expr oe, env), loc, attrs
 
   and map_expression exp =
     let exp = Map.enter_expression exp in
@@ -408,8 +411,9 @@ module MakeMap(Map : MapArgument) = struct
       | Texp_poly (Some ct) ->
         Texp_poly (Some ( map_core_type ct )), loc, attrs
       | Texp_newtype _
-      | Texp_open _
       | Texp_poly None -> exp_extra
+      | Texp_open(ovf, oe, env) ->
+        Texp_open(ovf, map_open_expr oe, env), loc, attrs
 
 
   and map_package_type pack =
@@ -445,7 +449,8 @@ module MakeMap(Map : MapArgument) = struct
                 )
         | Tsig_modtype mtd ->
             Tsig_modtype (map_module_type_declaration mtd)
-        | Tsig_open _ -> item.sig_desc
+        | Tsig_open od ->
+          Tsig_open {od with open_expr = map_open_expr od.open_expr}
         | Tsig_include incl ->
             Tsig_include {incl with incl_mod = map_module_type incl.incl_mod}
         | Tsig_class list -> Tsig_class (List.map map_class_description list)
@@ -454,6 +459,11 @@ module MakeMap(Map : MapArgument) = struct
         | Tsig_attribute _ as x -> x
     in
     Map.leave_signature_item { item with sig_desc = sig_desc }
+
+  and map_open_expr oexpr = match oexpr with
+    | Topen_lid _ -> oexpr
+    | Topen_tconstraint(p, lid, mty) ->
+      Topen_tconstraint(p, lid, map_module_type mty)
 
   and map_module_type_declaration mtd =
     let mtd = Map.enter_module_type_declaration mtd in
@@ -570,8 +580,8 @@ module MakeMap(Map : MapArgument) = struct
 
         | Tcl_ident (id, name, tyl) ->
             Tcl_ident (id, name, List.map map_core_type tyl)
-        | Tcl_open (ovf, p, lid, env, e) ->
-            Tcl_open (ovf, p, lid, env, map_class_expr e)
+        | Tcl_open (ovf, oe, env, e) ->
+            Tcl_open (ovf, map_open_expr oe, env, map_class_expr e)
     in
     Map.leave_class_expr { cexpr with cl_desc = cl_desc }
 
@@ -584,8 +594,8 @@ module MakeMap(Map : MapArgument) = struct
           Tcty_constr (path, lid, List.map map_core_type list)
         | Tcty_arrow (label, ct, cl) ->
           Tcty_arrow (label, map_core_type ct, map_class_type cl)
-        | Tcty_open (ovf, p, lid, env, e) ->
-          Tcty_open (ovf, p, lid, env, map_class_type e)
+        | Tcty_open (ovf, oe, env, e) ->
+          Tcty_open (ovf, map_open_expr oe, env, map_class_type e)
     in
     Map.leave_class_type { ct with cltyp_desc = cltyp_desc }
 

@@ -43,6 +43,8 @@ type mapper =
     module_type: mapper -> module_type -> module_type;
     module_type_declaration:
       mapper -> module_type_declaration -> module_type_declaration;
+    open_description: mapper -> open_description -> open_description;
+    open_expr: mapper -> open_expr -> open_expr;
     package_type: mapper -> package_type -> package_type;
     pat: mapper -> pattern -> pattern;
     row_field: mapper -> row_field -> row_field;
