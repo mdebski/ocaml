@@ -423,13 +423,13 @@ and simple_pattern ctxt (f:Format.formatter) (x:pattern) : unit =
     | Ppat_exception p ->
         pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
-    | Ppat_open (lid, p) ->
+    | Ppat_open (oexpr, p) ->
         let with_paren =
         match p.ppat_desc with
         | Ppat_array _ | Ppat_record _
         | Ppat_construct (({txt=Lident ("()"|"[]");_}), _) -> false
         | _ -> true in
-        pp f "@[<2>%a.%a @]" longident_loc lid
+        pp f "@[<2>%a.%a @]" (open_expr ctxt) oexpr
           (paren with_paren @@ pattern1 ctxt) p
     | _ -> paren true (pattern ctxt) f x
 
@@ -631,8 +631,8 @@ and expression ctxt f x =
     | Pexp_poly (e, Some ct) ->
         pp f "@[<hov2>(!poly!@ %a@ : %a)@]"
           (simple_expr ctxt) e (core_type ctxt) ct
-    | Pexp_open (ovf, lid, e) ->
-        pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
+    | Pexp_open (ovf, oexpr, e) ->
+        pp f "@[<2>let open%s %a in@;%a@]" (override ovf) (open_expr ctxt) oexpr
           (expression ctxt) e
     | Pexp_variant (l,Some eo) ->
         pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
@@ -746,6 +746,11 @@ and item_extension ctxt f (s, e) =
 and exception_declaration ctxt f ext =
   pp f "@[<hov2>exception@ %a@]" (extension_constructor ctxt) ext
 
+and open_expr ctxt f = function
+  | Popen_lid lid -> longident_loc f lid
+  | Popen_tconstraint(lid, mty) -> pp f "@[(%a@ :>@ %a)@]" longident_loc lid
+                                     (module_type ctxt) mty
+
 and class_signature ctxt f { pcsig_self = ct; pcsig_fields = l ;_} =
   let class_type_field f x =
     match x.pctf_desc with
@@ -795,8 +800,8 @@ and class_type ctxt f x =
   | Pcty_extension e ->
       extension ctxt f e;
       attributes ctxt f x.pcty_attributes
-  | Pcty_open (ovf, lid, e) ->
-      pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
+  | Pcty_open (ovf, oexpr, e) ->
+      pp f "@[<2>let open%s %a in@;%a@]" (override ovf) (open_expr ctxt) oexpr
         (class_type ctxt) e
 
 (* [class type a = object end] *)
@@ -914,8 +919,8 @@ and class_expr ctxt f x =
           (class_expr ctxt) ce
           (class_type ctxt) ct
     | Pcl_extension e -> extension ctxt f e
-    | Pcl_open (ovf, lid, e) ->
-        pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
+    | Pcl_open (ovf, oexpr, e) ->
+        pp f "@[<2>let open%s %a in@;%a@]" (override ovf) (open_expr ctxt) oexpr
           (class_expr ctxt) e
 
 and module_type ctxt f x =
@@ -1010,7 +1015,7 @@ and signature_item ctxt f x : unit =
   | Psig_open od ->
       pp f "@[<hov2>open%s@ %a@]%a"
         (override od.popen_override)
-        longident_loc od.popen_lid
+        (open_expr ctxt) od.popen_expr
         (item_attributes ctxt) od.popen_attributes
   | Psig_include incl ->
       pp f "@[<hov2>include@ %a@]%a"
@@ -1216,7 +1221,7 @@ and structure_item ctxt f x =
   | Pstr_open od ->
       pp f "@[<2>open%s@;%a@]%a"
         (override od.popen_override)
-        longident_loc od.popen_lid
+        (open_expr ctxt) od.popen_expr
         (item_attributes ctxt) od.popen_attributes
   | Pstr_modtype {pmtd_name=s; pmtd_type=md; pmtd_attributes=attrs} ->
       pp f "@[<hov2>module@ type@ %s%a@]%a"
