@@ -1020,8 +1020,9 @@ end
 module O = (N :> (module type of M))
 
 [%%expect {|
-module M :
-  TODO
+module M : sig  end
+module N : sig val a : int end
+module O :> sig  end = N
 |}]
 
 module type AB = sig
@@ -1035,15 +1036,15 @@ module type BA = sig
 end
 
 module G(X:AB) = struct
-  module M :> BA = X
+  module M = ((X :> BA) :> AB)
 end
 module M = G(struct let a = 1 and b = 2 end)
 
 let _ = M.M.a
 
 [%%expect {|
-  ...
-1
-
-
+module type AB = sig val a : int val b : int end
+module type BA = sig val a : int val b : int end
+Line _, characters 15-16:
+Error: Left hand side not supported for transparent inscription
 |}]

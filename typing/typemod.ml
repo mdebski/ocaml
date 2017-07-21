@@ -43,6 +43,7 @@ type error =
   | Recursive_module_require_explicit_type
   | Apply_generative
   | Cannot_scrape_alias of Path.t
+  | Unsupported_transparent_inscription
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -1192,14 +1193,14 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         with Includemod.Error msg ->
           raise(Error(arg.mod_loc, env, Not_included msg))
       in begin
-        match arg.mod_desc with
+        let tree, path = match arg.mod_desc with
         | Tmod_ident (path, _) ->
           { mod_desc = Tmod_tconstraint(arg, mty, coercion);
             mod_type = Mty_alias (Mta_absent, path, Some mty.mty_type);
             mod_env = env;
             mod_loc = smod.pmod_loc;
             mod_attributes = smod.pmod_attributes;
-          }
+          }, path
         | Tmod_tconstraint (expr, cmt, _) ->
           let coercion = try
             Includemod.modtypes ~loc:arg.mod_loc env cmt.mty_type mty.mty_type
@@ -1208,16 +1209,23 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           in let rec extract_path expr = match expr with
           | Tmod_ident (path, _) -> path
           | Tmod_tconstraint (expr, _, _) -> extract_path (expr.mod_desc)
-          | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
+          | _ ->
+            raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
+          in let path = extract_path expr.mod_desc
           in
           { mod_desc = Tmod_tconstraint(arg, mty, coercion);
-            mod_type = Mty_alias (Mta_absent, extract_path expr.mod_desc,
+            mod_type = Mty_alias (Mta_absent, path,
                                   Some mty.mty_type);
             mod_env = env;
             mod_loc = smod.pmod_loc;
             mod_attributes = smod.pmod_attributes;
-          }
-        | _ -> failwith "Left-hand side not supported in Pmod_tconstraint"
+          }, path
+        | _ ->
+            raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
+        in if Env.is_functor_arg path env then
+          raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
+        ;
+        tree
       end
   | Pmod_unpack sexp ->
       if !Clflags.principal then Ctype.begin_def ();
@@ -1869,6 +1877,8 @@ let report_error ppf = function
       fprintf ppf
         "This is an alias for module %a, which is missing"
         path p
+  | Unsupported_transparent_inscription ->
+      fprintf ppf "Left hand side not supported for transparent inscription"
 
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error ppf err)
