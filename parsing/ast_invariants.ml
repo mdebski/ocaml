@@ -71,6 +71,9 @@ let iterator =
       List.iter (fun (id, _) -> simple_longident id) fields
     | _ -> ()
   in
+  let open_expr = function
+    | Popen_lid lid | Popen_tconstraint(lid, _) -> simple_longident lid
+  in
   let expr self exp =
     begin match exp.pexp_desc with
     | Pexp_construct (_, Some ({pexp_desc = Pexp_tuple _} as e))
@@ -89,8 +92,8 @@ let iterator =
     | Pexp_construct (id, _)
     | Pexp_field (_, id)
     | Pexp_setfield (_, id, _)
-    | Pexp_new id
-    | Pexp_open (_, id, _) -> simple_longident id
+    | Pexp_new id -> simple_longident id
+    | Pexp_open (_, oexpr, _) -> open_expr oexpr
     | Pexp_record (fields, _) ->
       List.iter (fun (id, _) -> simple_longident id) fields
     | _ -> ()
@@ -117,7 +120,7 @@ let iterator =
   in
   let open_description self opn =
     super.open_description self opn;
-    simple_longident opn.popen_lid
+    open_expr opn.popen_expr
   in
   let with_constraint self wc =
     super.with_constraint self wc;

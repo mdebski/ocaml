@@ -52,6 +52,7 @@ type iterator = {
   module_type: iterator -> module_type -> unit;
   module_type_declaration: iterator -> module_type_declaration -> unit;
   open_description: iterator -> open_description -> unit;
+  open_expr: iterator -> open_expr -> unit;
   pat: iterator -> pattern -> unit;
   payload: iterator -> payload -> unit;
   signature: iterator -> signature -> unit;
@@ -182,8 +183,8 @@ module CT = struct
     | Pcty_arrow (_lab, t, ct) ->
         sub.typ sub t; sub.class_type sub ct
     | Pcty_extension x -> sub.extension sub x
-    | Pcty_open (_ovf, lid, e) ->
-        iter_loc sub lid; sub.class_type sub e
+    | Pcty_open (_ovf, oexpr, e) ->
+        sub.open_expr sub oexpr; sub.class_type sub e
 
   let iter_field sub {pctf_desc = desc; pctf_loc = loc; pctf_attributes = attrs}
     =
@@ -231,6 +232,10 @@ module MT = struct
     | Pwith_typesubst d -> sub.type_declaration sub d
     | Pwith_modsubst (s, lid) ->
         iter_loc sub s; iter_loc sub lid
+
+  let iter_open_expr sub = function
+    | Popen_lid lid -> iter_loc sub lid
+    | Popen_tconstraint(lid, mty) -> iter_loc sub lid; sub.module_type sub mty
 
   let iter_signature_item sub {psig_desc = desc; psig_loc = loc} =
     sub.location sub loc;
@@ -369,8 +374,8 @@ module E = struct
     | Pexp_object cls -> sub.class_structure sub cls
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
-    | Pexp_open (_ovf, lid, e) ->
-        iter_loc sub lid; sub.expr sub e
+    | Pexp_open (_ovf, oexpr, e) ->
+        sub.open_expr sub oexpr; sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
     | Pexp_unreachable -> ()
 end
@@ -402,8 +407,8 @@ module P = struct
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x
-    | Ppat_open (lid, p) ->
-        iter_loc sub lid; sub.pat sub p
+    | Ppat_open (oexpr, p) ->
+        sub.open_expr sub oexpr; sub.pat sub p
 
 end
 
@@ -431,8 +436,8 @@ module CE = struct
     | Pcl_constraint (ce, ct) ->
         sub.class_expr sub ce; sub.class_type sub ct
     | Pcl_extension x -> sub.extension sub x
-    | Pcl_open (_ovf, lid, e) ->
-        iter_loc sub lid; sub.class_expr sub e
+    | Pcl_open (_ovf, oexpr, e) ->
+        sub.open_expr sub oexpr; sub.class_expr sub e
 
   let iter_kind sub = function
     | Cfk_concrete (_o, e) -> sub.expr sub e
@@ -478,6 +483,7 @@ let default_iterator =
     signature_item = MT.iter_signature_item;
     module_type = MT.iter;
     with_constraint = MT.iter_with_constraint;
+    open_expr = MT.iter_open_expr;
     class_declaration =
       (fun this -> CE.class_infos this (this.class_expr this));
     class_expr = CE.iter;
@@ -532,8 +538,8 @@ let default_iterator =
 
 
     open_description =
-      (fun this {popen_lid; popen_override = _; popen_attributes; popen_loc} ->
-         iter_loc this popen_lid;
+      (fun this {popen_expr; popen_override = _; popen_attributes; popen_loc} ->
+         this.open_expr this popen_expr;
          this.location this popen_loc;
          this.attributes this popen_attributes
       );

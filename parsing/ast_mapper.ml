@@ -57,6 +57,7 @@ type mapper = {
   module_type_declaration: mapper -> module_type_declaration
                            -> module_type_declaration;
   open_description: mapper -> open_description -> open_description;
+  open_expr: mapper -> open_expr -> open_expr;
   pat: mapper -> pattern -> pattern;
   payload: mapper -> payload -> payload;
   signature: mapper -> signature -> signature;
@@ -191,8 +192,8 @@ module CT = struct
     | Pcty_arrow (lab, t, ct) ->
         arrow ~loc ~attrs lab (sub.typ sub t) (sub.class_type sub ct)
     | Pcty_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pcty_open (ovf, lid, ct) ->
-        open_ ~loc ~attrs ovf (map_loc sub lid) (sub.class_type sub ct)
+    | Pcty_open (ovf, oexpr, ct) ->
+        open_ ~loc ~attrs ovf (sub.open_expr sub oexpr) (sub.class_type sub ct)
 
   let map_field sub {pctf_desc = desc; pctf_loc = loc; pctf_attributes = attrs}
     =
@@ -245,6 +246,11 @@ module MT = struct
     | Pwith_typesubst d -> Pwith_typesubst (sub.type_declaration sub d)
     | Pwith_modsubst (s, lid) ->
         Pwith_modsubst (map_loc sub s, map_loc sub lid)
+
+  let map_open_expr sub = function
+    | Popen_lid lid -> Popen_lid (map_loc sub lid)
+    | Popen_tconstraint(lid, mty) ->
+      Popen_tconstraint(map_loc sub lid, sub.module_type sub mty)
 
   let map_signature_item sub {psig_desc = desc; psig_loc = loc} =
     let open Sig in
@@ -392,8 +398,8 @@ module E = struct
     | Pexp_newtype (s, e) ->
         newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
-    | Pexp_open (ovf, lid, e) ->
-        open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
+    | Pexp_open (ovf, oexpr, e) ->
+        open_ ~loc ~attrs ovf (sub.open_expr sub oexpr) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pexp_unreachable -> unreachable ~loc ~attrs ()
 end
@@ -425,7 +431,8 @@ module P = struct
     | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
     | Ppat_lazy p -> lazy_ ~loc ~attrs (sub.pat sub p)
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
-    | Ppat_open (lid,p) -> open_ ~loc ~attrs (map_loc sub lid) (sub.pat sub p)
+    | Ppat_open (oexpr,p) ->
+        open_ ~loc ~attrs (sub.open_expr sub oexpr) (sub.pat sub p)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)
     | Ppat_extension x -> extension ~loc ~attrs (sub.extension sub x)
 end
@@ -456,8 +463,8 @@ module CE = struct
     | Pcl_constraint (ce, ct) ->
         constraint_ ~loc ~attrs (sub.class_expr sub ce) (sub.class_type sub ct)
     | Pcl_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pcl_open (ovf, lid, ce) ->
-        open_ ~loc ~attrs ovf (map_loc sub lid) (sub.class_expr sub ce)
+    | Pcl_open (ovf, oexpr, ce) ->
+        open_ ~loc ~attrs ovf (sub.open_expr sub oexpr) (sub.class_expr sub ce)
 
   let map_kind sub = function
     | Cfk_concrete (o, e) -> Cfk_concrete (o, sub.expr sub e)
@@ -510,6 +517,7 @@ let default_mapper =
     signature_item = MT.map_signature_item;
     module_type = MT.map;
     with_constraint = MT.map_with_constraint;
+    open_expr = MT.map_open_expr;
     class_declaration =
       (fun this -> CE.class_infos this (this.class_expr this));
     class_expr = CE.map;
@@ -568,13 +576,12 @@ let default_mapper =
 
 
     open_description =
-      (fun this {popen_lid; popen_override; popen_attributes; popen_loc} ->
-         Opn.mk (map_loc this popen_lid)
+      (fun this {popen_expr; popen_override; popen_attributes; popen_loc} ->
+         Opn.mk (this.open_expr this popen_expr)
            ~override:popen_override
            ~loc:(this.location this popen_loc)
            ~attrs:(this.attributes this popen_attributes)
       );
-
 
     include_description =
       (fun this {pincl_mod; pincl_attributes; pincl_loc} ->

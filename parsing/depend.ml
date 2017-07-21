@@ -72,7 +72,8 @@ let rec add_path bv ?(p=[]) = function
   | Ldot(l, s) -> add_path bv ~p:(s::p) l
   | Lapply(l1, l2) -> add_path bv l1; add_path bv l2
 
-let open_module bv lid =
+let open_module bv (Popen_lid lid | Popen_tconstraint(lid, _)) =
+  let lid = lid.txt in
   match lookup_map lid bv with
   | Node (s, m) ->
       add_names s;
@@ -168,7 +169,7 @@ let rec add_class_type bv cty =
       add_type bv ty1; add_class_type bv cty2
   | Pcty_extension e -> handle_extension e
   | Pcty_open (_ovf, m, e) ->
-      let bv = open_module bv m.txt in add_class_type bv e
+      let bv = open_module bv m in add_class_type bv e
 
 and add_class_type_field bv pctf =
   match pctf.pctf_desc with
@@ -204,7 +205,7 @@ let rec add_pattern bv pat =
   | Ppat_type li -> add bv li
   | Ppat_lazy p -> add_pattern bv p
   | Ppat_unpack id -> pattern_bv := StringMap.add id.txt bound !pattern_bv
-  | Ppat_open ( m, p) -> let bv = open_module bv m.txt in add_pattern bv p
+  | Ppat_open ( m, p) -> let bv = open_module bv m in add_pattern bv p
   | Ppat_exception p -> add_pattern bv p
   | Ppat_extension e -> handle_extension e
 
@@ -265,7 +266,7 @@ let rec add_expr bv exp =
   | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->
-      let bv = open_module bv m.txt in add_expr bv e
+      let bv = open_module bv m in add_expr bv e
   | Pexp_extension (({ txt = ("ocaml.extension_constructor"|
                               "extension_constructor"); _ },
                      PStr [item]) as e) ->
@@ -367,7 +368,7 @@ and add_sig_item (bv, m) item =
       end;
       (bv, m)
   | Psig_open od ->
-      (open_module bv od.popen_lid.txt, m)
+      (open_module bv od.popen_expr, m)
   | Psig_include incl ->
       let Node (s, m') = add_modtype_binding bv incl.pincl_mod in
       add_names s;
@@ -460,7 +461,7 @@ and add_struct_item (bv, m) item : _ StringMap.t * _ StringMap.t =
       end;
       (bv, m)
   | Pstr_open od ->
-      (open_module bv od.popen_lid.txt, m)
+      (open_module bv od.popen_expr, m)
   | Pstr_class cdl ->
       List.iter (add_class_declaration bv) cdl; (bv, m)
   | Pstr_class_type cdtl ->
@@ -507,7 +508,7 @@ and add_class_expr bv ce =
       add_class_expr bv ce; add_class_type bv ct
   | Pcl_extension e -> handle_extension e
   | Pcl_open (_ovf, m, e) ->
-      let bv = open_module bv m.txt in add_class_expr bv e
+      let bv = open_module bv m in add_class_expr bv e
 
 and add_class_field bv pcf =
   match pcf.pcf_desc with

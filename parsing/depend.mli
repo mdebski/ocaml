@@ -29,7 +29,7 @@ val free_structure_names : StringSet.t ref
 (* dependencies found by preprocessing tools (plugins) *)
 val pp_deps : string list ref
 
-val open_module : bound_map -> Longident.t -> bound_map
+val open_module : bound_map -> Parsetree.open_expr -> bound_map
 
 val add_use_file : bound_map -> Parsetree.toplevel_phrase list -> unit
 
