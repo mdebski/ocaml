@@ -72,14 +72,16 @@ let rec add_path bv ?(p=[]) = function
   | Ldot(l, s) -> add_path bv ~p:(s::p) l
   | Lapply(l1, l2) -> add_path bv l1; add_path bv l2
 
-let open_module bv (Popen_lid lid | Popen_tconstraint(lid, _)) =
-  let lid = lid.txt in
+let open_module_by_lid bv lid =
   match lookup_map lid bv with
   | Node (s, m) ->
       add_names s;
       StringMap.fold StringMap.add m bv
   | exception Not_found ->
       add_path bv lid; bv
+
+let open_module bv (Popen_lid lid | Popen_tconstraint(lid, _)) =
+  open_module_by_lid bv lid.txt
 
 let add_parent bv lid =
   match lid.txt with
