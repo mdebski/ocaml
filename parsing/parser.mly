@@ -481,6 +481,7 @@ let package_type_of_module_type pmty =
 %token LESS
 %token LESSCOLON
 %token LESSMINUS
+%token LESSCOLON
 %token LET
 %token <string> LIDENT
 %token LPAREN
@@ -597,7 +598,7 @@ The precedences must be listed from low to high.
 %nonassoc below_HASH
 %nonassoc HASH                         /* simple_expr/toplevel_directive */
 %left     HASHOP
-%nonassoc COLONGREATER                 /* below DOT (M.N :> S) */
+%nonassoc LESSCOLON                     /* below DOT (M.N <: S) */
 %nonassoc below_DOT
 %nonassoc DOT
 /* Finally, the first tokens of simple_expr are above everything else. */
@@ -1458,13 +1459,25 @@ simple_expr:
       { mkexp_constraint $2 $3 }
   | simple_expr DOT label_longident
       { mkexp(Pexp_field($1, mkrhs $3 3)) }
-  | open_expr DOT LPAREN seq_expr RPAREN
-      { mkexp(Pexp_open(Fresh, $1, $4)) }
-  | open_expr DOT LPAREN RPAREN
-      { mkexp(Pexp_open(Fresh, $1,
-                        mkexp(Pexp_construct(mkrhs (Lident "()") 1, None)))) }
-  | open_expr DOT LPAREN seq_expr error
+
+  /* Inline these to avoid conflict with M.(+) */
+  | mod_longident DOT LPAREN seq_expr RPAREN
+      { mkexp(Pexp_open(Fresh, (Popen_lid (mkrhs $1 1)), $4)) }
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN seq_expr RPAREN
+      { mkexp(Pexp_open(Fresh, (Popen_tconstraint((mkrhs $2 2), $4)), $8)) }
+  | mod_longident DOT LPAREN RPAREN
+      { mkexp(Pexp_open(Fresh, (Popen_lid (mkrhs $1 1)),
+        mkexp(Pexp_construct(mkrhs (Lident "()") 1, None))
+      )) }
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN RPAREN
+      { mkexp(Pexp_open(Fresh, (Popen_tconstraint((mkrhs $2 2), $4)),
+        mkexp(Pexp_construct(mkrhs (Lident "()") 1, None))
+      )) }
+  | mod_longident DOT LPAREN seq_expr error
       { unclosed "(" 3 ")" 5 }
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN seq_expr error
+      { unclosed "(" 5 ")" 9 }
+
   | simple_expr DOT LPAREN seq_expr RPAREN
       { mkexp(Pexp_apply(ghexp(Pexp_ident(array_function "Array" "get")),
                          [Nolabel,$1; Nolabel,$4])) }
@@ -1483,36 +1496,36 @@ simple_expr:
       { let (exten, fields) = $2 in mkexp (Pexp_record(fields, exten)) }
   | LBRACE record_expr error
       { unclosed "{" 1 "}" 3 }
-  | open_expr DOT LBRACE record_expr RBRACE
-      { let (exten, fields) = $4 in
+  | open_expr_dot LBRACE record_expr RBRACE
+      { let (exten, fields) = $3 in
         let rec_exp = mkexp(Pexp_record(fields, exten)) in
         mkexp(Pexp_open(Fresh, $1, rec_exp)) }
-  | open_expr DOT LBRACE record_expr error
-      { unclosed "{" 3 "}" 5 }
+  | open_expr_dot LBRACE record_expr error
+      { unclosed "{" 2 "}" 4 }
   | LBRACKETBAR expr_semi_list opt_semi BARRBRACKET
       { mkexp (Pexp_array(List.rev $2)) }
   | LBRACKETBAR expr_semi_list opt_semi error
       { unclosed "[|" 1 "|]" 4 }
   | LBRACKETBAR BARRBRACKET
       { mkexp (Pexp_array []) }
-  | open_expr DOT LBRACKETBAR expr_semi_list opt_semi BARRBRACKET
-      { mkexp(Pexp_open(Fresh, $1, mkexp(Pexp_array(List.rev $4)))) }
-  | open_expr DOT LBRACKETBAR BARRBRACKET
+  | open_expr_dot LBRACKETBAR expr_semi_list opt_semi BARRBRACKET
+      { mkexp(Pexp_open(Fresh, $1, mkexp(Pexp_array(List.rev $3)))) }
+  | open_expr_dot LBRACKETBAR BARRBRACKET
       { mkexp(Pexp_open(Fresh, $1, mkexp(Pexp_array []))) }
-  | open_expr DOT LBRACKETBAR expr_semi_list opt_semi error
-      { unclosed "[|" 3 "|]" 6 }
+  | open_expr_dot LBRACKETBAR expr_semi_list opt_semi error
+      { unclosed "[|" 2 "|]" 5 }
   | LBRACKET expr_semi_list opt_semi RBRACKET
       { reloc_exp (mktailexp (rhs_loc 4) (List.rev $2)) }
   | LBRACKET expr_semi_list opt_semi error
       { unclosed "[" 1 "]" 4 }
-  | open_expr DOT LBRACKET expr_semi_list opt_semi RBRACKET
-      { let list_exp = reloc_exp (mktailexp (rhs_loc 6) (List.rev $4)) in
+  | open_expr_dot LBRACKET expr_semi_list opt_semi RBRACKET
+      { let list_exp = reloc_exp (mktailexp (rhs_loc 5) (List.rev $3)) in
         mkexp(Pexp_open(Fresh, $1, list_exp)) }
-  | open_expr DOT LBRACKET RBRACKET
+  | open_expr_dot LBRACKET RBRACKET
       { mkexp(Pexp_open(Fresh, $1,
                         mkexp(Pexp_construct(mkrhs (Lident "[]") 1, None)))) }
-  | open_expr DOT LBRACKET expr_semi_list opt_semi error
-      { unclosed "[" 3 "]" 6 }
+  | open_expr_dot LBRACKET expr_semi_list opt_semi error
+      { unclosed "[" 2 "]" 5 }
   | PREFIXOP simple_expr
       { mkexp(Pexp_apply(mkoperator $1 1, [Nolabel,$2])) }
   | BANG simple_expr
@@ -1525,12 +1538,12 @@ simple_expr:
       { unclosed "{<" 1 ">}" 3 }
   | LBRACELESS GREATERRBRACE
       { mkexp (Pexp_override [])}
-  | open_expr DOT LBRACELESS field_expr_list GREATERRBRACE
-      { mkexp(Pexp_open(Fresh, $1, mkexp (Pexp_override $4)))}
-  | open_expr DOT LBRACELESS GREATERRBRACE
+  | open_expr_dot LBRACELESS field_expr_list GREATERRBRACE
+      { mkexp(Pexp_open(Fresh, $1, mkexp (Pexp_override $3)))}
+  | open_expr_dot LBRACELESS GREATERRBRACE
       { mkexp(Pexp_open(Fresh, $1, mkexp (Pexp_override [])))}
-  | open_expr DOT LBRACELESS field_expr_list error
-      { unclosed "{<" 3 ">}" 5 }
+  | open_expr_dot LBRACELESS field_expr_list error
+      { unclosed "{<" 2 ">}" 4 }
   | simple_expr HASH label
       { mkexp(Pexp_send($1, mkrhs $3 3)) }
   | simple_expr HASHOP simple_expr
@@ -1543,14 +1556,14 @@ simple_expr:
                     $3 }
   | LPAREN MODULE ext_attributes module_expr COLON error
       { unclosed "(" 1 ")" 6 }
-  | open_expr DOT LPAREN MODULE ext_attributes module_expr COLON
+  | open_expr_dot LPAREN MODULE ext_attributes module_expr COLON
     package_type RPAREN
       { mkexp(Pexp_open(Fresh, $1,
-        mkexp_attrs (Pexp_constraint (ghexp (Pexp_pack $6),
-                                ghtyp (Ptyp_package $8)))
-                    $5 )) }
-  | open_expr DOT LPAREN MODULE ext_attributes module_expr COLON error
-      { unclosed "(" 3 ")" 8 }
+        mkexp_attrs (Pexp_constraint (ghexp (Pexp_pack $5),
+                                ghtyp (Ptyp_package $7)))
+                    $4 )) }
+  | open_expr_dot LPAREN MODULE ext_attributes module_expr COLON error
+      { unclosed "(" 2 ")" 7 }
   | extension
       { mkexp (Pexp_extension $1) }
 ;
@@ -2504,10 +2517,16 @@ additive:
   | PLUS                                        { "+" }
   | PLUSDOT                                     { "+." }
 ;
+open_expr_dot:
+    mod_longident DOT
+      { Popen_lid (mkrhs $1 1) }
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT
+      { Popen_tconstraint((mkrhs $2 2), $4) }
+;
 open_expr:
     mod_longident       %prec below_DOT
       { Popen_lid (mkrhs $1 1) }
-  | LPAREN mod_longident COLONGREATER module_type RPAREN
+  | LPAREN mod_longident LESSCOLON module_type RPAREN %prec below_DOT
       { Popen_tconstraint((mkrhs $2 2), $4) }
 ;
 

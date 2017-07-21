@@ -1,0 +1,338 @@
+[
+  structure_item (./test.ml[1,0+0]..[1,0+13])
+    Pstr_open Fresh 
+    Popen_tconstraint "M" (./test.ml[1,0+6]..[1,0+7])
+      module_type (./test.ml[1,0+11]..[1,0+12])
+        Pmty_ident "S" (./test.ml[1,0+11]..[1,0+12])
+  structure_item (./test.ml[3,15+0]..[3,15+13])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[3,15+4]..[3,15+5])
+          Ppat_any
+        expression (./test.ml[3,15+8]..[3,15+13])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[3,15+8]..[3,15+9])
+          expression (./test.ml[3,15+11]..[3,15+12])
+            Pexp_ident "a" (./test.ml[3,15+11]..[3,15+12])
+    ]
+  structure_item (./test.ml[4,29+0]..[4,29+13])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[4,29+4]..[4,29+5])
+          Ppat_any
+        expression (./test.ml[4,29+8]..[4,29+13])
+          Pexp_ident "M.+" (./test.ml[4,29+8]..[4,29+13])
+    ]
+  structure_item (./test.ml[5,43+0]..[5,43+12])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[5,43+4]..[5,43+5])
+          Ppat_any
+        expression (./test.ml[5,43+8]..[5,43+12])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[5,43+8]..[5,43+9])
+          expression (./test.ml[5,43+8]..[5,43+12])
+            Pexp_construct "()" (./test.ml[5,43+8]..[5,43+9])
+            None
+    ]
+  structure_item (./test.ml[6,56+0]..[6,56+26])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[6,56+4]..[6,56+5])
+          Ppat_any
+        expression (./test.ml[6,56+8]..[6,56+26])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[6,56+8]..[6,56+9])
+          expression (./test.ml[6,56+8]..[6,56+26])
+            Pexp_record
+            [
+              "def" (./test.ml[6,56+21]..[6,56+24])
+                expression (./test.ml[6,56+21]..[6,56+24])
+                  Pexp_ident "def" (./test.ml[6,56+21]..[6,56+24])
+            ]
+            Some
+              expression (./test.ml[6,56+12]..[6,56+15])
+                Pexp_ident "abc" (./test.ml[6,56+12]..[6,56+15])
+    ]
+  structure_item (./test.ml[7,83+0]..[7,83+19])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[7,83+4]..[7,83+5])
+          Ppat_any
+        expression (./test.ml[7,83+8]..[7,83+19])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[7,83+8]..[7,83+9])
+          expression (./test.ml[7,83+8]..[7,83+19])
+            Pexp_override
+            [
+              <override> "abc" (./test.ml[7,83+13]..[7,83+16])
+                expression (./test.ml[7,83+13]..[7,83+16])
+                  Pexp_ident "abc" (./test.ml[7,83+13]..[7,83+16])
+            ]
+    ]
+  structure_item (./test.ml[8,103+0]..[8,103+14])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[8,103+4]..[8,103+5])
+          Ppat_any
+        expression (./test.ml[8,103+8]..[8,103+14])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[8,103+8]..[8,103+9])
+          expression (./test.ml[8,103+8]..[8,103+14])
+            Pexp_override
+            []
+    ]
+  structure_item (./test.ml[9,118+0]..[9,118+17])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[9,118+4]..[9,118+5])
+          Ppat_any
+        expression (./test.ml[9,118+8]..[9,118+17])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[9,118+8]..[9,118+9])
+          expression (./test.ml[9,118+8]..[9,118+17])
+            Pexp_construct "::" (./test.ml[9,118+12]..[9,118+17]) ghost
+            Some
+              expression (./test.ml[9,118+12]..[9,118+17]) ghost
+                Pexp_tuple
+                [
+                  expression (./test.ml[9,118+12]..[9,118+15])
+                    Pexp_ident "abc" (./test.ml[9,118+12]..[9,118+15])
+                  expression (./test.ml[9,118+16]..[9,118+17]) ghost
+                    Pexp_construct "[]" (./test.ml[9,118+16]..[9,118+17]) ghost
+                    None
+                ]
+    ]
+  structure_item (./test.ml[10,136+0]..[10,136+12])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[10,136+4]..[10,136+5])
+          Ppat_any
+        expression (./test.ml[10,136+8]..[10,136+12])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[10,136+8]..[10,136+9])
+          expression (./test.ml[10,136+8]..[10,136+12])
+            Pexp_construct "[]" (./test.ml[10,136+8]..[10,136+10])
+            None
+    ]
+  structure_item (./test.ml[11,149+0]..[11,149+19])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[11,149+4]..[11,149+5])
+          Ppat_any
+        expression (./test.ml[11,149+8]..[11,149+19])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[11,149+8]..[11,149+9])
+          expression (./test.ml[11,149+8]..[11,149+19])
+            Pexp_array
+            [
+              expression (./test.ml[11,149+13]..[11,149+16])
+                Pexp_ident "abc" (./test.ml[11,149+13]..[11,149+16])
+            ]
+    ]
+  structure_item (./test.ml[12,169+0]..[12,169+14])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[12,169+4]..[12,169+5])
+          Ppat_any
+        expression (./test.ml[12,169+8]..[12,169+14])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[12,169+8]..[12,169+9])
+          expression (./test.ml[12,169+8]..[12,169+14])
+            Pexp_array
+            []
+    ]
+  structure_item (./test.ml[14,185+0]..[14,185+20])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[14,185+4]..[14,185+5])
+          Ppat_any
+        expression (./test.ml[14,185+8]..[14,185+20])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[14,185+9]..[14,185+10])
+            module_type (./test.ml[14,185+14]..[14,185+15])
+              Pmty_ident "S" (./test.ml[14,185+14]..[14,185+15])
+          expression (./test.ml[14,185+18]..[14,185+19])
+            Pexp_ident "a" (./test.ml[14,185+18]..[14,185+19])
+    ]
+  structure_item (./test.ml[15,206+0]..[15,206+19])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[15,206+4]..[15,206+5])
+          Ppat_any
+        expression (./test.ml[15,206+8]..[15,206+19])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[15,206+9]..[15,206+10])
+            module_type (./test.ml[15,206+14]..[15,206+15])
+              Pmty_ident "S" (./test.ml[15,206+14]..[15,206+15])
+          expression (./test.ml[15,206+8]..[15,206+19])
+            Pexp_construct "()" (./test.ml[15,206+8]..[15,206+9])
+            None
+    ]
+  structure_item (./test.ml[16,226+0]..[16,226+33])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[16,226+4]..[16,226+5])
+          Ppat_any
+        expression (./test.ml[16,226+8]..[16,226+33])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[16,226+9]..[16,226+10])
+            module_type (./test.ml[16,226+14]..[16,226+15])
+              Pmty_ident "S" (./test.ml[16,226+14]..[16,226+15])
+          expression (./test.ml[16,226+8]..[16,226+33])
+            Pexp_record
+            [
+              "def" (./test.ml[16,226+28]..[16,226+31])
+                expression (./test.ml[16,226+28]..[16,226+31])
+                  Pexp_ident "def" (./test.ml[16,226+28]..[16,226+31])
+            ]
+            Some
+              expression (./test.ml[16,226+19]..[16,226+22])
+                Pexp_ident "abc" (./test.ml[16,226+19]..[16,226+22])
+    ]
+  structure_item (./test.ml[17,260+0]..[17,260+26])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[17,260+4]..[17,260+5])
+          Ppat_any
+        expression (./test.ml[17,260+8]..[17,260+26])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[17,260+9]..[17,260+10])
+            module_type (./test.ml[17,260+14]..[17,260+15])
+              Pmty_ident "S" (./test.ml[17,260+14]..[17,260+15])
+          expression (./test.ml[17,260+8]..[17,260+26])
+            Pexp_override
+            [
+              <override> "abc" (./test.ml[17,260+20]..[17,260+23])
+                expression (./test.ml[17,260+20]..[17,260+23])
+                  Pexp_ident "abc" (./test.ml[17,260+20]..[17,260+23])
+            ]
+    ]
+  structure_item (./test.ml[18,287+0]..[18,287+21])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[18,287+4]..[18,287+5])
+          Ppat_any
+        expression (./test.ml[18,287+8]..[18,287+21])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[18,287+9]..[18,287+10])
+            module_type (./test.ml[18,287+14]..[18,287+15])
+              Pmty_ident "S" (./test.ml[18,287+14]..[18,287+15])
+          expression (./test.ml[18,287+8]..[18,287+21])
+            Pexp_override
+            []
+    ]
+  structure_item (./test.ml[19,309+0]..[19,309+24])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[19,309+4]..[19,309+5])
+          Ppat_any
+        expression (./test.ml[19,309+8]..[19,309+24])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[19,309+9]..[19,309+10])
+            module_type (./test.ml[19,309+14]..[19,309+15])
+              Pmty_ident "S" (./test.ml[19,309+14]..[19,309+15])
+          expression (./test.ml[19,309+8]..[19,309+24])
+            Pexp_construct "::" (./test.ml[19,309+19]..[19,309+24]) ghost
+            Some
+              expression (./test.ml[19,309+19]..[19,309+24]) ghost
+                Pexp_tuple
+                [
+                  expression (./test.ml[19,309+19]..[19,309+22])
+                    Pexp_ident "abc" (./test.ml[19,309+19]..[19,309+22])
+                  expression (./test.ml[19,309+23]..[19,309+24]) ghost
+                    Pexp_construct "[]" (./test.ml[19,309+23]..[19,309+24]) ghost
+                    None
+                ]
+    ]
+  structure_item (./test.ml[20,334+0]..[20,334+19])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[20,334+4]..[20,334+5])
+          Ppat_any
+        expression (./test.ml[20,334+8]..[20,334+19])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[20,334+9]..[20,334+10])
+            module_type (./test.ml[20,334+14]..[20,334+15])
+              Pmty_ident "S" (./test.ml[20,334+14]..[20,334+15])
+          expression (./test.ml[20,334+8]..[20,334+19])
+            Pexp_construct "[]" (./test.ml[20,334+8]..[20,334+17])
+            None
+    ]
+  structure_item (./test.ml[21,354+0]..[21,354+26])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[21,354+4]..[21,354+5])
+          Ppat_any
+        expression (./test.ml[21,354+8]..[21,354+26])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[21,354+9]..[21,354+10])
+            module_type (./test.ml[21,354+14]..[21,354+15])
+              Pmty_ident "S" (./test.ml[21,354+14]..[21,354+15])
+          expression (./test.ml[21,354+8]..[21,354+26])
+            Pexp_array
+            [
+              expression (./test.ml[21,354+20]..[21,354+23])
+                Pexp_ident "abc" (./test.ml[21,354+20]..[21,354+23])
+            ]
+    ]
+  structure_item (./test.ml[22,381+0]..[22,381+21])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[22,381+4]..[22,381+5])
+          Ppat_any
+        expression (./test.ml[22,381+8]..[22,381+21])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[22,381+9]..[22,381+10])
+            module_type (./test.ml[22,381+14]..[22,381+15])
+              Pmty_ident "S" (./test.ml[22,381+14]..[22,381+15])
+          expression (./test.ml[22,381+8]..[22,381+21])
+            Pexp_array
+            []
+    ]
+  structure_item (./test.ml[24,404+0]..[24,404+25])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[24,404+4]..[24,404+5])
+          Ppat_any
+        expression (./test.ml[24,404+8]..[24,404+25])
+          Pexp_open Fresh
+          Popen_lid "M" (./test.ml[24,404+17]..[24,404+18])
+          expression (./test.ml[24,404+22]..[24,404+25])
+            Pexp_ident "abc" (./test.ml[24,404+22]..[24,404+25])
+    ]
+  structure_item (./test.ml[25,430+0]..[25,430+32])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (./test.ml[25,430+4]..[25,430+5])
+          Ppat_any
+        expression (./test.ml[25,430+8]..[25,430+32])
+          Pexp_open Fresh
+          Popen_tconstraint "M" (./test.ml[25,430+18]..[25,430+19])
+            module_type (./test.ml[25,430+23]..[25,430+24])
+              Pmty_ident "S" (./test.ml[25,430+23]..[25,430+24])
+          expression (./test.ml[25,430+29]..[25,430+32])
+            Pexp_ident "abc" (./test.ml[25,430+29]..[25,430+32])
+    ]
+]
