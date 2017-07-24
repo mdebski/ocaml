@@ -1186,47 +1186,29 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           mod_attributes = smod.pmod_attributes;
          }
   | Pmod_tconstraint(sarg, smty) ->
-      let arg = type_module ~alias true funct_body anchor env sarg in
+      let arg = type_module ~alias:true true funct_body anchor env sarg in
       let mty = transl_modtype env smty in
+      let cmty = mty.mty_type in
       let coercion = try
-          Includemod.modtypes ~loc:arg.mod_loc env arg.mod_type mty.mty_type
+          Includemod.modtypes ~loc:arg.mod_loc env arg.mod_type cmty
         with Includemod.Error msg ->
           raise(Error(arg.mod_loc, env, Not_included msg))
-      in begin
-        let tree, path = match arg.mod_desc with
-        | Tmod_ident (path, _) ->
-          { mod_desc = Tmod_tconstraint(arg, mty, coercion);
-            mod_type = Mty_alias (Mta_absent, path, Some mty.mty_type);
-            mod_env = env;
-            mod_loc = smod.pmod_loc;
-            mod_attributes = smod.pmod_attributes;
-          }, path
-        | Tmod_tconstraint (expr, cmt, _) ->
-          let coercion = try
-            Includemod.modtypes ~loc:arg.mod_loc env cmt.mty_type mty.mty_type
-          with Includemod.Error msg ->
-            raise(Error(arg.mod_loc, env, Not_included msg))
-          in let rec extract_path expr = match expr with
-          | Tmod_ident (path, _) -> path
-          | Tmod_tconstraint (expr, _, _) -> extract_path (expr.mod_desc)
-          | _ ->
-            raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
-          in let path = extract_path expr.mod_desc
-          in
-          { mod_desc = Tmod_tconstraint(arg, mty, coercion);
-            mod_type = Mty_alias (Mta_absent, path,
-                                  Some mty.mty_type);
-            mod_env = env;
-            mod_loc = smod.pmod_loc;
-            mod_attributes = smod.pmod_attributes;
-          }, path
+      in let new_type = begin match arg.mod_type with
+        | Mty_ident p -> Mty_alias(Mta_absent, p, Some cmty)
+        | Mty_alias(_pres, p, _cmty) -> Mty_alias(Mta_absent, p, Some cmty)
         | _ ->
-            raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
-        in if Env.is_functor_arg path env then
-          raise(Error(arg.mod_loc, env, Unsupported_transparent_inscription))
-        ;
-        tree
-      end
+          let tmp_name = Ident.create "#module#" in
+          let tmp_env = Env.add_module tmp_name arg.mod_type env in
+          let cmty_st = !Env.strengthen ~aliasable:`Aliasable_with_constraints
+                                        tmp_env cmty (Pident tmp_name) in
+          Mtype.nondep_supertype tmp_env tmp_name cmty_st
+      end in
+      { mod_desc = Tmod_tconstraint(arg, mty, coercion);
+        mod_type = new_type;
+        mod_env = env;
+        mod_loc = smod.pmod_loc;
+        mod_attributes = smod.pmod_attributes;
+      }
   | Pmod_unpack sexp ->
       if !Clflags.principal then Ctype.begin_def ();
       let exp = Typecore.type_exp env sexp in

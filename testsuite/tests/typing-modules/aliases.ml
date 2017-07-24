@@ -1045,6 +1045,31 @@ let _ = M.M.a
 [%%expect {|
 module type AB = sig val a : int val b : int end
 module type BA = sig val a : int val b : int end
-Line _, characters 15-16:
-Error: Left hand side not supported for transparent inscription
+module G :
+  functor (X : AB) -> sig module M : sig val a : int val b : int end end
+module M : sig module M : sig val a : int val b : int end end
+- : int = 1
+|}]
+
+module type A = sig
+  type t
+  val a : t
+end
+
+module P = ((struct
+  type t = int
+  let a = 1
+  let b = 1
+  end)
+  <: A)
+
+let _ = P.a
+let _ = P.b
+
+[%%expect {|
+module type A = sig type t val a : t end
+module P : sig type t = int val a : t end
+- : P.t = 1
+Line _, characters 8-11:
+Error: Unbound value P.b
 |}]
