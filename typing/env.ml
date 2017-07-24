@@ -161,7 +161,7 @@ type summary =
   | Env_modtype of summary * Ident.t * modtype_declaration
   | Env_class of summary * Ident.t * class_declaration
   | Env_cltype of summary * Ident.t * class_type_declaration
-  | Env_open of summary * Path.t
+  | Env_open of summary * Path.t * module_type option
   | Env_functor_arg of summary * Ident.t
   | Env_constraints of summary * type_declaration PathMap.t
   | Env_copy_types of summary * string list
@@ -445,7 +445,9 @@ type t = {
   constrs: constructor_description TycompTbl.t;
   labels: label_description TycompTbl.t;
   types: (type_declaration * type_descriptions) IdTbl.t;
-  modules: (Subst.t * module_declaration, module_declaration) EnvLazy.t IdTbl.t;
+  modules: (Subst.t * module_declaration * module_type option,
+            module_declaration * module_type option) EnvLazy.t IdTbl.t;
+
   modtypes: modtype_declaration IdTbl.t;
   components: module_components IdTbl.t;
   classes: class_declaration IdTbl.t;
@@ -478,7 +480,8 @@ and structure_components = {
   mutable comp_labels: (string, label_description list) Tbl.t;
   mutable comp_types: (type_declaration * type_descriptions) comp_tbl;
   mutable comp_modules:
-   (Subst.t * module_declaration, module_declaration) EnvLazy.t comp_tbl;
+    (Subst.t * module_declaration * module_type option,
+     module_declaration * module_type option) EnvLazy.t comp_tbl;
   mutable comp_modtypes: modtype_declaration comp_tbl;
   mutable comp_components: module_components comp_tbl;
   mutable comp_classes: class_declaration comp_tbl;
@@ -526,9 +529,9 @@ let check_shadowing env = function
   | `Class None | `Class_type None | `Component None ->
       None
 
-let subst_modtype_maker (subst, md) =
-  if subst == Subst.identity then md
-  else {md with md_type = Subst.modtype subst md.md_type}
+let subst_modtype_maker (subst, md, omty) =
+  if subst == Subst.identity then md, omty
+  else {md with md_type = Subst.modtype subst md.md_type}, omty
 
 let empty = {
   values = IdTbl.empty; constrs = TycompTbl.empty;
@@ -613,12 +616,17 @@ let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
 
-let get_components_opt c =
-  match !can_load_cmis with
+let get_components_opt ~omty c =
+  let maker = match omty with
+  | None -> !components_of_module_maker'
+  | Some mty -> fun (env, sub, path, _mty) ->
+    (* TODO mdebski: check either here or in type_open *)
+    !components_of_module_maker' (env, sub, path, mty)
+  in match !can_load_cmis with
   | Can_load_cmis ->
-    EnvLazy.force !components_of_module_maker' c.comps
+    EnvLazy.force maker c.comps
   | Cannot_load_cmis log ->
-    EnvLazy.force_logged log !components_of_module_maker' c.comps
+    EnvLazy.force_logged log maker c.comps
 
 let empty_structure =
   Structure_comps {
@@ -630,8 +638,8 @@ let empty_structure =
     comp_components = Tbl.empty; comp_classes = Tbl.empty;
     comp_cltypes = Tbl.empty }
 
-let get_components c =
-  match get_components_opt c with
+let get_components ?mty c =
+  match get_components_opt ~omty:mty c with
   | None -> empty_structure
   | Some c -> c
 
@@ -976,7 +984,7 @@ let find_module ~alias path env =
       with Not_found ->
         if Ident.persistent id && not (Ident.name id = !current_unit) then
           let ps = find_pers_struct (Ident.name id) in
-          md (Mty_signature(Lazy.force ps.ps_sig))
+          md (Mty_signature(Lazy.force ps.ps_sig)), None
         else raise Not_found
       end
   | Pdot(p, s, _pos) ->
@@ -1004,7 +1012,7 @@ let find_module ~alias path env =
                     f.fcomp_res in
                 Hashtbl.add f.fcomp_subst_cache p2 mty;
                 mty
-          end
+          end, None
       | Structure_comps _ ->
           raise Not_found
       end
@@ -1019,6 +1027,12 @@ let may_find_modtype path env = try
 let may_find_module path env = try
     Some (find_module path env)
   with Not_found -> None
+
+let find_module_type ~alias path env =
+  let md, omty = find_module ~alias path env in
+  match omty with
+    | None -> md.md_type
+    | Some mty -> Mty_alias(Mta_absent, path, Some mty)
 
 let required_globals = ref []
 let reset_required_globals () = required_globals := []
@@ -1036,8 +1050,8 @@ let add_required_global id =
 *)
 let rec normalize_module_path ~env path =
   let path = normalize_prefix_path ~env path in
-  match find_module_alias path env with
-  |  {md_type=Mty_alias(_, alias_path, _)} ->
+  match find_module_type ~alias:true path env with
+  | Mty_alias(_, alias_path, _) ->
       normalize_module_path ~env alias_path
   | _ -> path
   | exception Not_found -> path
@@ -1140,8 +1154,9 @@ let rec lookup_module_descr_aux ?loc lid env =
       end
   | Lapply(l1, l2) ->
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let p2 = lookup_module ~load:true ?loc l2 env in
-      let {md_type=mty2} = find_module p2 env in
+      (* TODO mdebski: what with omty2? *)
+      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = find_module_type p2 env in
       begin match get_components desc1 with
         Functor_comps f ->
           let loc = match loc with Some l -> l | None -> Location.none in
@@ -1161,12 +1176,12 @@ and lookup_module_descr ?loc lid env =
   report_deprecated ?loc p comps.deprecated;
   res
 
-and lookup_module ~load ?loc lid env : Path.t =
+and lookup_module ~load ?loc lid env : Path.t * module_type option =
   match lid with
     Lident s ->
       begin try
         let (p, data) = IdTbl.find_name s env.modules in
-        let {md_loc; md_attributes; md_type} =
+        let ({md_loc; md_attributes; md_type}, omty) =
           EnvLazy.force subst_modtype_maker data
         in
         mark_module_used env s md_loc;
@@ -1178,7 +1193,7 @@ and lookup_module ~load ?loc lid env : Path.t =
         end;
         report_deprecated ?loc p
           (Builtin_attributes.deprecated_of_attrs md_attributes);
-        p
+        p, omty
       with Not_found ->
         if s = !current_unit then raise Not_found;
         let p = Pident(Ident.create_persistent s) in
@@ -1187,31 +1202,33 @@ and lookup_module ~load ?loc lid env : Path.t =
           let ps = find_pers_struct s in
           report_deprecated ?loc p ps.ps_comps.deprecated
         end;
-        p
+        p, None
       end
   | Ldot(l, s) ->
       let (p, descr) = lookup_module_descr ?loc l env in
       begin match get_components descr with
         Structure_comps c ->
-          let (_data, pos) = Tbl.find_str s c.comp_modules in
-          let (comps, _) = Tbl.find_str s c.comp_components in
+          let (data, pos) = Tbl.find_str s c.comp_modules in
+          let _, omty = EnvLazy.force (fun (_, md, constr) -> md, constr) data
+          in let (comps, _) = Tbl.find_str s c.comp_components in
           mark_module_used env s comps.loc;
           let p = Pdot(p, s, pos) in
           report_deprecated ?loc p comps.deprecated;
-          p
+          p, omty
       | Functor_comps _ ->
           raise Not_found
       end
   | Lapply(l1, l2) ->
+      (* TODO mdebski: rethink this case later *)
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let p2 = lookup_module ~load:true ?loc l2 env in
-      let {md_type=mty2} = find_module p2 env in
+      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = find_module_type p2 env in
       let p = Papply(p1, p2) in
       begin match get_components desc1 with
         Functor_comps f ->
           let loc = match loc with Some l -> l | None -> Location.none in
           Misc.may (!check_modtype_inclusion ~loc env mty2 p2) f.fcomp_arg;
-          p
+          p, None
       | Structure_comps _ ->
           raise Not_found
       end
@@ -1440,7 +1457,7 @@ let rec scrape_alias_for_visit env mty =
       && not (Hashtbl.mem persistent_structures (Ident.name id)) -> false
   | Mty_alias(_, _, Some _) -> true
   | Mty_alias(_, path, _) -> (* PR#6600: find_module may raise Not_found *)
-      begin try scrape_alias_for_visit env (find_module path env).md_type
+      begin try scrape_alias_for_visit env (find_module_type path env)
       with Not_found -> false
       end
   | _ -> true
@@ -1589,7 +1606,7 @@ let rec scrape_only_alias env ?(strengthened=true) ?path mty =
   match mty, path, strengthened with
   | Mty_alias(_, alias_path, None), _, _ -> begin
       match may_find_module alias_path env with
-        | Some { md_type } ->
+        | Some md_type ->
           scrape_only_alias ~strengthened env md_type ~path:alias_path
         | None -> mty
       end
@@ -1735,7 +1752,11 @@ and components_of_module_maker (env, sub, path, mty) =
               add_to_tbl (Ident.name id) descr c.comp_constrs;
             incr pos
         | Sig_module(id, md, _) ->
-            let md' = EnvLazy.create (sub, md) in
+            let omty = match md.md_type with
+              | Mty_alias(_, _, omty) -> omty
+              | _ -> None
+            in
+            let md' = EnvLazy.create (sub, md, omty) in
             c.comp_modules <-
               Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
             let deprecated =
@@ -1747,7 +1768,7 @@ and components_of_module_maker (env, sub, path, mty) =
             in
             c.comp_components <-
               Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
-            env := store_module ~check:false id md !env;
+            env := store_module ~check:false ~omty id md !env;
             incr pos
         | Sig_modtype(id, decl) ->
             let decl' = Subst.modtype_declaration sub decl in
@@ -1895,7 +1916,7 @@ and store_extension ~check id ext env =
                 env.constrs;
     summary = Env_extension(env.summary, id, ext) }
 
-and store_module ~check id md env =
+and store_module ~check ~omty id md env =
   let loc = md.md_loc in
   if check then
     check_usage loc id (fun s -> Warnings.Unused_module s)
@@ -1903,7 +1924,8 @@ and store_module ~check id md env =
 
   let deprecated = Builtin_attributes.deprecated_of_attrs md.md_attributes in
   { env with
-    modules = IdTbl.add id (EnvLazy.create (Subst.identity, md)) env.modules;
+    modules = IdTbl.add id (EnvLazy.create (Subst.identity, md, omty))
+                env.modules;
     components =
       IdTbl.add id
         (components_of_module ~deprecated ~loc:md.md_loc
@@ -1965,7 +1987,7 @@ and add_extension ~check id ext env =
   store_extension ~check id ext env
 
 and add_module_declaration ?(arg=false) ~check id md env =
-  let env = store_module ~check id md env in
+  let env = store_module ~omty:None ~check id md env in
   if arg then add_functor_arg id env else env
 
 and add_modtype id info env =
@@ -2003,8 +2025,6 @@ and enter_type = enter (store_type ~check:true)
 and enter_extension = enter (store_extension ~check:true)
 and enter_module_declaration ?arg id md env =
   add_module_declaration ?arg ~check:true id md env
-  (* let (id, env) = enter store_module name md env in
-  (id, add_functor_arg ?arg id env) *)
 and enter_modtype = enter store_modtype
 and enter_class = enter store_class
 and enter_cltype = enter store_cltype
@@ -2032,7 +2052,7 @@ let rec add_signature sg env =
 
 (* Open a signature path *)
 
-let add_components slot root env0 comps =
+let add_components ~omty slot root env0 comps =
   let add_l w comps env0 =
     TycompTbl.add_open slot w comps env0
   in
@@ -2070,7 +2090,7 @@ let add_components slot root env0 comps =
   in
 
   { env0 with
-    summary = Env_open(env0.summary, root);
+    summary = Env_open(env0.summary, root, omty);
     constrs;
     labels;
     values;
@@ -2082,22 +2102,23 @@ let add_components slot root env0 comps =
     modules;
   }
 
-let open_signature slot root env0 =
-  match get_components (find_module_descr root env0) with
+let open_signature ~omty slot root env0 =
+  let comps = find_module_descr root env0 in
+  match get_components ?mty:omty comps with
   | Functor_comps _ -> None
-  | Structure_comps comps -> Some (add_components slot root env0 comps)
+  | Structure_comps comps -> Some (add_components ~omty slot root env0 comps)
 
 
 (* Open a signature from a file *)
 
 let open_pers_signature name env =
-  match open_signature None (Pident(Ident.create_persistent name)) env with
+  match open_signature ~omty:None None (Pident(Ident.create_persistent name)) env with
   | Some env -> env
   | None -> assert false (* a compilation unit cannot refer to a functor *)
 
 let open_signature
     ?(used_slot = ref false)
-    ?(loc = Location.none) ?(toplevel = false) ovf root env =
+    ?(loc = Location.none) ?(toplevel = false) ~omty ovf root env =
   if not toplevel && ovf = Asttypes.Fresh && not loc.Location.loc_ghost
      && (Warnings.is_active (Warnings.Unused_open "")
          || Warnings.is_active (Warnings.Open_shadow_identifier ("", ""))
@@ -2127,9 +2148,9 @@ let open_signature
       end;
       used := true
     in
-    open_signature (Some slot) root env
+    open_signature ~omty (Some slot) root env
   end
-  else open_signature None root env
+  else open_signature ~omty None root env
 
 (* Read a signature from a file *)
 
@@ -2268,7 +2289,7 @@ let fold_modules f lid env acc =
               None -> acc
             | Some ps ->
               f name (Pident(Ident.create_persistent name))
-                     (md (Mty_signature (Lazy.force ps.ps_sig))) acc)
+                     (md (Mty_signature (Lazy.force ps.ps_sig)), None) acc)
         persistent_structures
         acc
     | Some l ->

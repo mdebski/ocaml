@@ -80,36 +80,6 @@ let extract_sig_open env loc mty =
       raise(Error(loc, env, Cannot_scrape_alias path))
   | mty -> raise(Error(loc, env, Structure_expected mty))
 
-(* Compute the environment after opening a module *)
-
-let type_open_ ?used_slot ?toplevel ovf env loc oexpr =
-  match oexpr with
-  | Popen_lid lid -> begin
-    let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
-    match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
-    | Some env -> Topen_lid(path, lid), env
-    | None ->
-        let md = Env.find_module path env in
-        ignore (extract_sig_open env lid.loc md.md_type);
-        assert false
-    end
-  | Popen_tconstraint(_lid, _mty) ->
-      failwith "TODO mdebski: implement type_open_ for open M :> S"
-
-let type_open ?toplevel env sod =
-  let (oexpr, newenv) =
-    type_open_ ?toplevel sod.popen_override env sod.popen_loc sod.popen_expr
-  in
-  let od =
-    {
-      open_override = sod.popen_override;
-      open_expr = oexpr;
-      open_attributes = sod.popen_attributes;
-      open_loc = sod.popen_loc;
-    }
-  in
-  (oexpr, newenv, od)
-
 (* Record a module type *)
 let rm node =
   Stypes.record (Stypes.Ti_mod node);
@@ -228,8 +198,12 @@ let merge_constraint initial_env loc sg constr =
         update_rec_next rs rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_module (_, lid'))
       when Ident.name id = s ->
-        let path, md' = Typetexp.find_module initial_env loc lid'.txt in
-        let md'' = {md' with md_type = Mtype.remove_aliases env md'.md_type} in
+        let path, md', omty = Typetexp.find_module initial_env loc lid'.txt in
+        let mty = match omty with
+          | None -> md'.md_type
+          | Some mty -> Mty_alias(Mta_absent, path, Some mty)
+        in
+        let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
         let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
@@ -237,8 +211,13 @@ let merge_constraint initial_env loc sg constr =
         Sig_module(id, newmd, rs) :: rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_modsubst (_, lid'))
       when Ident.name id = s ->
-        let path, md' = Typetexp.find_module initial_env loc lid'.txt in
-        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md'
+        let path, md', omty = Typetexp.find_module initial_env loc lid'.txt in
+        let mty = match omty with
+          | None -> md'.md_type
+          | Some mty -> Mty_alias(Mta_absent, path, Some mty)
+        in
+        let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         real_id := Some id;
@@ -286,7 +265,7 @@ let merge_constraint initial_env loc sg constr =
     | [_], Pwith_modsubst (_, lid) ->
         let id =
           match !real_id with None -> assert false | Some id -> id in
-        let path = Typetexp.lookup_module initial_env loc lid.txt in
+        let path, _ = Typetexp.lookup_module initial_env loc lid.txt in
         let sub = Subst.add_module id path Subst.identity in
         Subst.signature sub sg
     | _ ->
@@ -342,8 +321,8 @@ let rec approx_modtype env smty =
       let (path, _info) = Typetexp.find_modtype env smty.pmty_loc lid.txt in
       Mty_ident path
   | Pmty_alias lid ->
-      let path = Typetexp.lookup_module env smty.pmty_loc lid.txt in
-      Mty_alias(Mta_absent, path, None)
+      let path, omty = Typetexp.lookup_module env smty.pmty_loc lid.txt in
+      Mty_alias(Mta_absent, path, omty)
   | Pmty_signature ssg ->
       Mty_signature(approx_sig env ssg)
   | Pmty_functor(param, sarg, sres) ->
@@ -366,6 +345,9 @@ and approx_module_declaration env pmd =
     md_attributes = pmd.pmd_attributes;
     md_loc = pmd.pmd_loc;
   }
+
+(* TODO mdebski *)
+and approx_type_open _env _sod = failwith "NIY."
 
 and approx_sig env ssg =
   match ssg with
@@ -403,7 +385,7 @@ and approx_sig env ssg =
           let (id, newenv) = Env.enter_modtype d.pmtd_name.txt info env in
           Sig_modtype(id, info) :: approx_sig newenv srem
       | Psig_open sod ->
-          let (_path, mty, _od) = type_open env sod in
+          let (_path, mty, _od) = approx_type_open env sod in
           approx_sig mty srem
       | Psig_include sincl ->
           let smty = sincl.pincl_mod in
@@ -544,8 +526,9 @@ let rec transl_modtype env smty =
       mkmty (Tmty_ident (path, lid)) (Mty_ident path) env loc
         smty.pmty_attributes
   | Pmty_alias lid ->
-      let path = transl_module_alias loc env lid.txt in
-      mkmty (Tmty_alias (path, lid)) (Mty_alias(Mta_absent, path, None)) env loc
+      let path, omty = transl_module_alias loc env lid.txt in
+      mkmty (Tmty_alias (path, lid))
+        (Mty_alias(Mta_absent, path, omty)) env loc
         smty.pmty_attributes
   | Pmty_signature ssg ->
       let sg = transl_signature env ssg in
@@ -846,6 +829,42 @@ and transl_recmodule_modtypes env sdecls =
   in
   (dcl2, env2)
 
+(* Compute the environment after opening a module *)
+
+and type_open_ ?used_slot ?toplevel ovf env loc oexpr =
+  let lid, omty, res_of_path = match oexpr with
+    | Popen_lid lid -> lid, None, (fun path -> Topen_lid(path, lid))
+    | Popen_tconstraint(lid, smty) ->
+      let mty = transl_modtype env smty in
+      lid, Some mty.mty_type, (fun path -> Topen_tconstraint(path, lid, mty))
+  in
+  let path, old_omty = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
+  begin match old_omty, omty with
+  | Some old_mty, Some mty -> ignore (Includemod.modtypes ~loc env old_mty mty)
+  (* TODO mdebski: | None, Some mty -> do we need to check in this case too? *)
+  | _ -> ()
+  end;
+  match Env.open_signature ~loc ?used_slot ?toplevel ~omty ovf path env with
+  | Some env -> res_of_path path, env
+  | None ->
+      let mty = Env.find_module_type path env in
+      ignore (extract_sig_open env lid.loc mty);
+      assert false
+
+and type_open ?toplevel env sod =
+  let (oexpr, newenv) =
+    type_open_ ?toplevel sod.popen_override env sod.popen_loc sod.popen_expr
+  in
+  let od =
+    {
+      open_override = sod.popen_override;
+      open_expr = oexpr;
+      open_attributes = sod.popen_attributes;
+      open_loc = sod.popen_loc;
+    }
+  in
+  (oexpr, newenv, od)
+
 (* Try to convert a module expression to a module path. *)
 
 exception Not_a_path
@@ -1076,10 +1095,10 @@ let wrap_constraint env arg mty explicit =
 let rec type_module ?(alias=false) sttn funct_body anchor env smod =
   match smod.pmod_desc with
   | Pmod_ident lid ->
-      let path =
+      let path, omty =
         Typetexp.lookup_module ~load:(not alias) env smod.pmod_loc lid.txt in
       let base_desc = Tmod_ident (path, lid) in
-      let base_type = Mty_alias(Mta_absent, path, None) in
+      let base_type = Mty_alias(Mta_absent, path, omty) in
       let loc = smod.pmod_loc in
       let aliasable = not (Env.is_functor_arg path env) in
       if alias && aliasable then begin
@@ -1559,9 +1578,9 @@ let type_module_type_of env smod =
   let tmty =
     match smod.pmod_desc with
     | Pmod_ident lid -> (* turn off strengthening in this case *)
-        let path, md = Typetexp.find_module env smod.pmod_loc lid.txt in
+        let path, mty = Typetexp.find_module_type env smod.pmod_loc lid.txt in
         rm { mod_desc = Tmod_ident (path, lid);
-             mod_type = md.md_type;
+             mod_type = mty;
              mod_env = env;
              mod_attributes = smod.pmod_attributes;
              mod_loc = smod.pmod_loc }

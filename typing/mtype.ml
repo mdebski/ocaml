@@ -133,7 +133,7 @@ let nondep_supertype env mid mty =
     | Mty_alias(_, p, omty) ->
         if Path.isfree mid p then
           let mty, aliasable = match omty with
-            | None -> (Env.find_module p env).md_type, `Aliasable
+            | None -> Env.find_module_type p env, `Aliasable
             | Some cmty -> cmty, `Aliasable_with_constraints
           in
           nondep_mty env va (strengthen ~aliasable env mty p)

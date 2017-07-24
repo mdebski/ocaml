@@ -83,8 +83,9 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
   | Longident.Lident _ -> ()
   | Longident.Ldot (mlid, _) ->
       check_module mlid;
-      let md = Env.find_module (Env.lookup_module ~load:true mlid env) env in
-      begin match Env.scrape_alias env md.md_type with
+      let path, _ = Env.lookup_module ~load:true mlid env in
+      let mty = Env.find_module_type path env in
+      begin match Env.scrape_alias env mty with
       | Mty_functor _ ->
           raise (Error (loc, env, Access_functor_as_structure mlid))
       | Mty_alias(_, p, _) ->
@@ -93,8 +94,9 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
       end
   | Longident.Lapply (flid, mlid) ->
       check_module flid;
-      let fmd = Env.find_module (Env.lookup_module ~load:true flid env) env in
-      begin match Env.scrape_alias env fmd.md_type with
+      let path, _ =  Env.lookup_module ~load:true flid env in
+      let fmty = Env.find_module_type path env in
+      begin match Env.scrape_alias env fmty with
       | Mty_signature _ ->
           raise (Error (loc, env, Apply_structure_as_functor flid))
       | Mty_alias(_, p, _) ->
@@ -102,8 +104,9 @@ let rec narrow_unbound_lid_error : 'a. _ -> _ -> _ -> _ -> 'a =
       | _ -> ()
       end;
       check_module mlid;
-      let mmd = Env.find_module (Env.lookup_module ~load:true mlid env) env in
-      begin match Env.scrape_alias env mmd.md_type with
+      let path, _ = Env.lookup_module ~load:true mlid env in
+      let mmty = Env.find_module_type path env in
+      begin match Env.scrape_alias env mmty with
       | Mty_alias(_, p, _) ->
           raise (Error (loc, env, Cannot_scrape_alias(mlid, p)))
       | _ ->
@@ -163,10 +166,15 @@ let lookup_module ?(load=false) env loc lid =
     (fun lid -> Unbound_module lid) env loc lid
 
 let find_module env loc lid =
-  let path = lookup_module ~load:true env loc lid in
-  let decl = Env.find_module path env in
+  let path, _omty = lookup_module ~load:true env loc lid in
+  let descr, omty = Env.find_module path env in
   (* No need to check for deprecated here, this is done in Env. *)
-  (path, decl)
+  (path, descr, omty)
+
+let find_module_type env loc lid =
+  let path, _ = lookup_module ~load:true env loc lid in
+  let mty = Env.find_module_type path env in
+  (path, mty)
 
 let find_modtype env loc lid =
   let (path, decl) as r =

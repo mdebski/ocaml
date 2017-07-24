@@ -29,7 +29,7 @@ type summary =
   | Env_modtype of summary * Ident.t * modtype_declaration
   | Env_class of summary * Ident.t * class_declaration
   | Env_cltype of summary * Ident.t * class_type_declaration
-  | Env_open of summary * Path.t
+  | Env_open of summary * Path.t * module_type option
   | Env_functor_arg of summary * Ident.t
   | Env_constraints of summary * type_declaration PathMap.t
   | Env_copy_types of summary * string list
@@ -63,8 +63,9 @@ val without_cmis: ('a -> 'b) -> 'a -> 'b
 val find_value: Path.t -> t -> value_description
 val find_type: Path.t -> t -> type_declaration
 val find_type_descrs: Path.t -> t -> type_descriptions
-val find_module: Path.t -> t -> module_declaration
-val find_module_alias: Path.t -> t -> module_declaration
+val find_module: Path.t -> t -> module_declaration * module_type option
+val find_module_type: Path.t -> t -> module_type
+val find_module_type_alias: Path.t -> t -> module_type
 val find_modtype: Path.t -> t -> modtype_declaration
 val find_class: Path.t -> t -> class_declaration
 val find_cltype: Path.t -> t -> class_type_declaration
@@ -134,7 +135,8 @@ val lookup_type:
      To obtain it, you should either call [Env.find_type], or replace
      it by [Typetexp.find_type] *)
 val lookup_module:
-  load:bool -> ?loc:Location.t -> Longident.t -> t -> Path.t
+  load:bool -> ?loc:Location.t -> Longident.t -> t ->
+  Path.t * module_type option
 val lookup_modtype:
   ?loc:Location.t -> Longident.t -> t -> Path.t * modtype_declaration
 val lookup_class:
@@ -170,13 +172,14 @@ val add_local_type: Path.t -> type_declaration -> t -> t
 val add_item: signature_item -> t -> t
 val add_signature: signature -> t -> t
 
-(* Insertion of all fields of a signature, relative to the given path.
+(* Insertion of fields of a signature, relative to the given path.
+   Omty is an optional open constraint, so that only some fields are added.
    Used to implement open. Returns None if the path refers to a functor,
    not a structure. *)
 val open_signature:
     ?used_slot:bool ref ->
-    ?loc:Location.t -> ?toplevel:bool -> Asttypes.override_flag -> Path.t ->
-      t -> t option
+    ?loc:Location.t -> ?toplevel:bool -> omty:(module_type option) ->
+    Asttypes.override_flag -> Path.t -> t -> t option
 
 val open_pers_signature: string -> t -> t
 
@@ -315,7 +318,7 @@ val fold_labels:
 
 (** Persistent structures are only traversed if they are already loaded. *)
 val fold_modules:
-  (string -> Path.t -> module_declaration -> 'a -> 'a) ->
+  (string -> Path.t -> (module_declaration * module_type option) -> 'a -> 'a) ->
   Longident.t option -> t -> 'a -> 'a
 
 val fold_modtypes:
