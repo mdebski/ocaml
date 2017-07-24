@@ -83,7 +83,6 @@ val is_functor_arg: Path.t -> t -> bool
    _value_ -> treat last part as a value, do not modify it
    _module -> treat last part as a module, possibly change it too if an alias
    Warning: it breaks positions in Pdot.
-   TODO mdebski: maybe return Longident.t, which has no positions, instead?
 *)
 val normalize_value_path: env:t -> Path.t -> Path.t
 val normalize_module_path: env:t -> Path.t -> Path.t
@@ -104,10 +103,6 @@ val normalize_package_path: env:t -> Path.t -> Path.t
 
 val realize_module_path: (loc:Location.t -> env:t -> Path.t -> Path.t) ref
 val realize_value_path: (loc:Location.t -> env:t -> Path.t -> Path.t) ref
-
-val realize_module_path_no_location: env:t -> Path.t -> Path.t
-val realize_value_path_no_location: env:t -> Path.t -> Path.t
-
 
 val reset_required_globals: unit -> unit
 val get_required_globals: unit -> Ident.t list

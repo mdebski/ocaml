@@ -43,7 +43,6 @@ type error =
   | Recursive_module_require_explicit_type
   | Apply_generative
   | Cannot_scrape_alias of Path.t
-  | Unsupported_transparent_inscription
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
@@ -863,8 +862,7 @@ let path_of_module mexp =
 
 let rec closed_modtype env = function
     Mty_ident _ -> true
-  | Mty_alias (_, _, None) -> true
-  | Mty_alias (_, _, Some mty) -> closed_modtype env mty
+  | Mty_alias (_, _, _) -> true
   | Mty_signature sg ->
       let env = Env.add_signature sg env in
       List.for_all (closed_signature_item env) sg
@@ -1087,6 +1085,8 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           (Env.add_required_global (Path.head path); md)
         else match (Env.find_module path env).md_type with
         | Mty_alias(_, p1, omty) when not alias ->
+          (* TODO mdebski: add tests for this path *)
+          (* TODO mdebski: use scrape_alias here? *)
             let p1 = !Env.realize_module_path ~loc:smod.pmod_loc ~env p1 in
             let mty, aliasable = match omty with
               | None -> Includemod.expand_module_alias env [] p1, `Aliasable
@@ -1859,8 +1859,6 @@ let report_error ppf = function
       fprintf ppf
         "This is an alias for module %a, which is missing"
         path p
-  | Unsupported_transparent_inscription ->
-      fprintf ppf "Left hand side not supported for transparent inscription"
 
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error ppf err)

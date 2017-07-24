@@ -840,6 +840,12 @@ Line _, characters 10-13:
 Error: Unbound value P.b
 |}]
 
+let _ = f O.b
+[%%expect{|
+Line _, characters 10-13:
+Error: Unbound value O.b
+|}]
+
 module M : AB = struct
   type t = ()
   let a = ()
