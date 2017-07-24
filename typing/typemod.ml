@@ -841,7 +841,8 @@ and type_open_ ?used_slot ?toplevel ovf env loc oexpr =
   let path, old_omty = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
   begin match old_omty, omty with
   | Some old_mty, Some mty -> ignore (Includemod.modtypes ~loc env old_mty mty)
-  (* TODO mdebski: | None, Some mty -> do we need to check in this case too? *)
+  | None, Some mty -> let real_mty = Env.find_module_type_alias path env in
+    ignore(Includemod.modtypes ~loc env real_mty mty)
   | _ -> ()
   end;
   match Env.open_signature ~loc ?used_slot ?toplevel ~omty ovf path env with
