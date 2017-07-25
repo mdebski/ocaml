@@ -607,8 +607,6 @@ let strengthen =
        aliasable:[`Aliasable | `Aliasable_with_constraints | `Not_aliasable] ->
        t -> module_type -> Path.t -> module_type)
 
-let realize_module_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
-                                 (loc:Location.t -> env:t -> Path.t -> Path.t))
 let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
                                 (loc:Location.t -> env:t -> Path.t -> Path.t))
 
@@ -1456,7 +1454,6 @@ let iter_env_cont = ref []
 
 let rec scrape_alias_for_visit env mty =
   match mty with
-  (* TODO mdebski: verify if it's fine to ignore restriction *)
   | Mty_alias(_, Pident id, _)
     when Ident.persistent id
       && not (Hashtbl.mem persistent_structures (Ident.name id)) -> false

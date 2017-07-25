@@ -92,8 +92,7 @@ val normalize_package_path: env:t -> Path.t -> Path.t
 
 (*
    Get a real path by which objects may be accessed.
-   _value_ -> treat last part as a value, do not modify it
-   _module -> treat last part as a module, possibly change it too if an alias
+   Treat last part as a value, do not modify it
 
    Unrolls aliases until a present one is found. May raise if some module is
    unavailable.
@@ -101,7 +100,6 @@ val normalize_package_path: env:t -> Path.t -> Path.t
    Forward declarations, defined in includemod
 *)
 
-val realize_module_path: (loc:Location.t -> env:t -> Path.t -> Path.t) ref
 val realize_value_path: (loc:Location.t -> env:t -> Path.t -> Path.t) ref
 
 val reset_required_globals: unit -> unit

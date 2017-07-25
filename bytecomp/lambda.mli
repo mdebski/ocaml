@@ -329,9 +329,9 @@ val free_methods: lambda -> IdentSet.t
 
 val transl_normal_path: Path.t -> lambda   (* Path.t is already normal *)
 val transl_path: ?loc:Location.t -> Env.t -> Path.t -> lambda
-[@@ocaml.deprecated "use transl_{module,value,extension,class}_path instead"]
+[@@ocaml.deprecated "use transl_{value,extension,class}_path instead or \
+                     Includemod.realize_module_path_with_coercion"]
 
-val transl_module_path: ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_value_path: ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_extension_path: ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_class_path: ?loc:Location.t -> Env.t -> Path.t -> lambda

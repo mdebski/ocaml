@@ -1087,7 +1087,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
         | Mty_alias(_, p1, omty) when not alias ->
           (* TODO mdebski: add tests for this path *)
           (* TODO mdebski: use scrape_alias here? *)
-            let p1 = !Env.realize_module_path ~loc:smod.pmod_loc ~env p1 in
+            let p1, _, _ = Includemod.realize_module_path_with_coercion ~loc:smod.pmod_loc ~env p1 in
             let mty, aliasable = match omty with
               | None -> Includemod.expand_module_alias env [] p1, `Aliasable
               | Some cmty -> cmty, `Aliasable_with_constraints

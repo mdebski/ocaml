@@ -534,9 +534,6 @@ let rec transl_normal_path = function
 
 (* Translation of identifiers *)
 
-let transl_module_path ?(loc=Location.none) env path =
-  transl_normal_path (!Env.realize_module_path ~loc ~env path)
-
 let transl_value_path ?(loc=Location.none) env path =
   transl_normal_path (!Env.realize_value_path ~loc ~env path)
 

@@ -270,12 +270,6 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
       match omty1, omty2, pres2 with
         | None, None, Mta_absent -> Tcoerce_none
         | _ -> begin
-          let inner_cc = try
-            realize_alias ~loc ~env pres1 p1 omty1
-          with Error _ ->
-            let norm_path = Env.normalize_module_path ~env p1 in
-            raise (Error[cxt, env, Unbound_module_path norm_path])
-          in
           let mty1 = Env.scrape_alias ~strengthened:false env mty1 in
           let mty2 = Env.scrape_alias ~strengthened:false env
                        (Subst.modtype subst mty2)
@@ -283,18 +277,24 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
           let cc = modtypes ~loc env cxt subst mty1 mty2 in
           match pres2 with
           | Mta_absent -> Tcoerce_none
-          | Mta_present -> compose_coercions cc inner_cc
+          | Mta_present ->
+            let inner_cc = try
+              realize_alias ~loc ~env pres1 p1 omty1
+            with Error _ ->
+              let norm_path = Env.normalize_module_path ~env p1 in
+              raise (Error[cxt, env, Unbound_module_path norm_path])
+            in compose_coercions cc inner_cc
       end
     end
   | (Mty_alias(pres1, p1, omty1), _) -> begin
+      let mty1 = Env.scrape_alias env mty1 in
+      let cc = modtypes ~loc env cxt subst mty1 mty2 in
       let inner_cc = try
         realize_alias ~loc ~env pres1 p1 omty1
       with Error _ ->
         let norm_path = Env.normalize_module_path ~env p1 in
         raise (Error[cxt, env, Unbound_module_path norm_path])
       in
-      let mty1 = Env.scrape_alias env mty1 in
-      let cc = modtypes ~loc env cxt subst mty1 mty2 in
       compose_coercions cc inner_cc
     end
   | (Mty_ident p1, _) when may_expand_module_path env p1 ->
@@ -582,8 +582,6 @@ let check_modtype_inclusion ~loc env mty1 path1 mty2 =
 
 let _ = Env.check_modtype_inclusion := check_modtype_inclusion
 
-let () = Env.realize_module_path := fun ~loc ~env path ->
-  fst3 (realize_module_path_with_coercion ~loc ~env path)
 let () = Env.realize_value_path := fun ~loc ~env path ->
   fst3 (realize_value_path_with_coercion ~loc ~env path)
 
