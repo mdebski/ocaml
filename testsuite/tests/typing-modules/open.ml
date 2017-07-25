@@ -72,24 +72,27 @@ Error: Unbound value N.b
 module M = struct
   let a = 1
   let b = 2
+  let c = 3
 end
 
 let _ = let open (M <: A) in a
 let _ = let open M in a
 let _ = let open M in b
 let _ = let open (M <: AB) in a + b
+let _ = M.c
 let () = a
 
 [%%expect {|
-module M : sig val a : int val b : int end
+module M : sig val a : int val b : int val c : int end
 - : int = 1
 - : int = 1
 - : int = 2
 - : int = 3
+- : int = 3
 |}]
 
 module type JustT = sig
-  type t
+  type t = A | B
 end
 
 module M = struct
@@ -106,7 +109,7 @@ let _ = match M.v2 with
   | (M <: JustT).[A] -> 1
   | _ -> 2
 [%%expect {|
-module type JustT = sig type t end
+module type JustT = sig type t = A | B end
 module M : sig type t = A | B val v : t val v2 : t list end
 - : int = 1
 - : int = 1

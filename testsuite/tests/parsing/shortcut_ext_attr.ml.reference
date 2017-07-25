@@ -56,7 +56,8 @@
                           expression (shortcut_ext_attr.ml[7,110+3]..[7,110+29])
                             attribute "foo"
                               []
-                            Pexp_open Fresh ""M" (shortcut_ext_attr.ml[7,110+22]..[7,110+23])"
+                            Pexp_open Fresh
+                            Popen_lid "M" (shortcut_ext_attr.ml[7,110+22]..[7,110+23])
                             expression (shortcut_ext_attr.ml[7,110+27]..[7,110+29])
                               Pexp_construct "()" (shortcut_ext_attr.ml[7,110+27]..[7,110+29])
                               None
@@ -756,7 +757,8 @@
     Pstr_extension "foo"
     [
       structure_item (shortcut_ext_attr.ml[88,1754+0]..[88,1754+16])
-        Pstr_open Fresh "M" (shortcut_ext_attr.ml[88,1754+15]..[88,1754+16])
+        Pstr_open Fresh 
+        Popen_lid "M" (shortcut_ext_attr.ml[88,1754+15]..[88,1754+16])
           attribute "foo"
             []
     ]
@@ -929,7 +931,8 @@
             Psig_extension "foo"
             [
               signature_item (shortcut_ext_attr.ml[109,2116+2]..[109,2116+18])
-                Psig_open Fresh "M" (shortcut_ext_attr.ml[109,2116+17]..[109,2116+18])
+                Psig_open Fresh
+                Popen_lid "M" (shortcut_ext_attr.ml[109,2116+17]..[109,2116+18])
                   attribute "foo"
                     []
             ]
