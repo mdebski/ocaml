@@ -615,23 +615,23 @@ let build_or_pat env loc lid =
 
 (* Type paths *)
 
-let rec expand_path env p =
+let rec expand_type_path env p =
   let decl =
     try Some (Env.find_type p env) with Not_found -> None
   in
   match decl with
     Some {type_manifest = Some ty} ->
       begin match repr ty with
-        {desc=Tconstr(p,_,_)} -> expand_path env p
+        {desc=Tconstr(p,_,_)} -> expand_type_path env p
       | _ -> p
          (* PR#6394: recursive module may introduce incoherent manifest *)
       end
   | _ ->
-      let p' = Env.normalize_value_path ~env p in
-      if Path.same p p' then p else expand_path env p'
+      let p' = Env.normalize_type_path ~env p in
+      if Path.same p p' then p else expand_type_path env p'
 
 let compare_type_path env tpath1 tpath2 =
-  Path.same (expand_path env tpath1) (expand_path env tpath2)
+  Path.same (expand_type_path env tpath1) (expand_type_path env tpath2)
 
 (* Records *)
 let label_of_kind kind =
@@ -743,12 +743,12 @@ end) = struct
           lbl
         with Not_found ->
           if lbls = [] then unbound_name_error env lid else
-          let tp = (tpath0, expand_path env tpath) in
+          let tp = (tpath0, expand_type_path env tpath) in
           let tpl =
             List.map
               (fun (lbl, _) ->
                 let tp0 = get_type_path lbl in
-                let tp = expand_path env tp0 in
+                let tp = expand_type_path env tp0 in
                   (tp0, tp))
               lbls
           in

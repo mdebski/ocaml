@@ -80,12 +80,13 @@ val add_functor_arg: Ident.t -> t -> t
 val is_functor_arg: Path.t -> t -> bool
 
 (* Normalize path - unroll all aliases on the path.
-   _value_ -> treat last part as a value, do not modify it
-   _module -> treat last part as a module, possibly change it too if an alias
-   Warning: it breaks positions in Pdot.
+   Versions for modules, module types and types.
+   Warning: it breaks positions in Pdot, therefore should not be used on
+            anything with runtime representation.
 *)
-val normalize_value_path: env:t -> Path.t -> Path.t
 val normalize_module_path: env:t -> Path.t -> Path.t
+val normalize_modtype_path: env:t -> Path.t -> Path.t
+val normalize_type_path: env:t -> Path.t -> Path.t
 
 val normalize_package_path: env:t -> Path.t -> Path.t
 

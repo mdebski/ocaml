@@ -1034,27 +1034,30 @@ let add_required_global id =
    normalize_module_path ->
      treat last part as a module, simplify prefix and then simplify last part
      if it is an alias.
-   normalize_value_path -> treat last part as a value, simplify just prefix.
+   normalize_prefix_path -> treat last part as a value, simplify just prefix.
 *)
 let rec normalize_module_path ~env path =
-  let path = normalize_value_path ~env path in
+  let path = normalize_prefix_path ~env path in
   match find_module_alias path env with
   |  {md_type=Mty_alias(_, alias_path, _)} ->
       normalize_module_path ~env alias_path
   | _ -> path
   | exception Not_found -> path
 
-and normalize_value_path ~env path = match path with
+and normalize_prefix_path ~env path = match path with
   | Pdot(p, s, _pos) -> Pdot(normalize_module_path ~env p, s, Path.nopos)
   | Papply(p1, p2) -> Papply(normalize_module_path ~env p1,
                              normalize_module_path ~env p2)
   | Pident _ -> path
 
+let normalize_modtype_path = normalize_prefix_path
+let normalize_type_path = normalize_prefix_path
+
 let rec normalize_package_path ~env path =
   match may_find_modtype path env with
   | Some (Mty_ident p) -> normalize_package_path ~env p
   | _ ->
-    let path' = normalize_value_path ~env path in
+    let path' = normalize_modtype_path ~env path in
     if Path.same path' path then
       path
     else

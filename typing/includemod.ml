@@ -326,8 +326,8 @@ and try_modtypes2 ~loc env cxt mty1 mty2 =
   (* mty2 is an identifier *)
   match (mty1, mty2) with
     (Mty_ident p1, Mty_ident p2)
-    when Path.same (Env.normalize_value_path ~env p1)
-                   (Env.normalize_value_path ~env p2) ->
+    when Path.same (Env.normalize_modtype_path ~env p1)
+                   (Env.normalize_modtype_path ~env p2) ->
       Tcoerce_none
   | (_, Mty_ident p2) when may_expand_module_path env p2 ->
       try_modtypes ~loc env cxt Subst.identity mty1 (expand_module_path env cxt p2)
