@@ -1575,6 +1575,10 @@ let add_gadt_instance_chain env lv t =
 
 (* Expand manifest module type names at the top of the given module type *)
 
+let may_find_modtype path env = try
+    (find_modtype path env).mtd_type
+  with Not_found -> None
+
 let may_find_module path env = try
     Some (find_module path env)
   with Not_found -> None
@@ -1582,7 +1586,7 @@ let may_find_module path env = try
 let rec scrape_alias env ?(strengthened=true) ?path mty =
   match mty, path, strengthened with
   | Mty_ident p, _, _ ->
-    begin match (find_modtype p env).mtd_type with
+    begin match may_find_modtype p env with
     | Some found_mty -> scrape_alias ~strengthened env found_mty ?path
     | None -> mty
     end
