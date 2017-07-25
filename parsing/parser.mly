@@ -1795,20 +1795,33 @@ simple_pattern_not_ident:
       { mkpat(Ppat_type (mkrhs $2 2)) }
   | simple_delimited_pattern
       { $1 }
-  | open_expr DOT simple_delimited_pattern
-      { mkpat @@ Ppat_open($1, $3) }
-  | open_expr DOT LBRACKET RBRACKET
+
+  | open_expr_dot simple_delimited_pattern
+      { mkpat @@ Ppat_open($1, $2) }
+  | open_expr_dot LBRACKET RBRACKET
     { mkpat @@ Ppat_open($1, mkpat @@
-               Ppat_construct ( mkrhs (Lident "[]") 4, None)) }
-  | open_expr DOT LPAREN RPAREN
-      { mkpat @@ Ppat_open($1, mkpat @@
+               Ppat_construct ( mkrhs (Lident "[]") 3, None)) }
+
+  /* Inline these to avoid conflict with M.(+) */
+  | mod_longident DOT LPAREN RPAREN
+      { mkpat @@ Ppat_open(Popen_lid (mkrhs $1 1), mkpat @@
                  Ppat_construct ( mkrhs (Lident "()") 4, None) ) }
-  | open_expr DOT LPAREN pattern RPAREN
-      { mkpat @@ Ppat_open ($1, $4)}
-  | open_expr DOT LPAREN pattern error
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN RPAREN
+      { mkpat @@ Ppat_open(Popen_tconstraint((mkrhs $2 2), $4), mkpat @@
+                 Ppat_construct ( mkrhs (Lident "()") 8, None) ) }
+  | mod_longident DOT LPAREN pattern RPAREN
+      { mkpat @@ Ppat_open (Popen_lid (mkrhs $1 1), $4)}
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN pattern RPAREN
+      { mkpat @@ Ppat_open (Popen_tconstraint((mkrhs $2 2), $4), $8)}
+  | mod_longident DOT LPAREN pattern error
       {unclosed "(" 3 ")" 5  }
-  | open_expr DOT LPAREN error
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN pattern error
+      {unclosed "(" 5 ")" 7  }
+  | mod_longident DOT LPAREN error
       { expecting 4 "pattern" }
+  | LPAREN mod_longident LESSCOLON module_type RPAREN DOT LPAREN error
+      { expecting 6 "pattern" }
+
   | LPAREN pattern RPAREN
       { reloc_pat $2 }
   | LPAREN pattern error
