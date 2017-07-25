@@ -616,12 +616,16 @@ let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
 
-let get_components_opt c =
+let get_components_opt ?maker c =
+  let maker = match maker with
+    | None -> !components_of_module_maker'
+    | Some maker -> maker
+  in
   match !can_load_cmis with
   | Can_load_cmis ->
-    EnvLazy.force !components_of_module_maker' c.comps
+    EnvLazy.force maker c.comps
   | Cannot_load_cmis log ->
-    EnvLazy.force_logged log !components_of_module_maker' c.comps
+    EnvLazy.force_logged log maker c.comps
 
 let empty_structure =
   Structure_comps {
@@ -633,8 +637,8 @@ let empty_structure =
     comp_components = Tbl.empty; comp_classes = Tbl.empty;
     comp_cltypes = Tbl.empty }
 
-let get_components c =
-  match get_components_opt c with
+let get_components ?maker c =
+  match get_components_opt ?maker c with
   | None -> empty_structure
   | Some c -> c
 
@@ -1205,7 +1209,7 @@ and lookup_module ~load ?loc lid env : Path.t * module_type option =
       begin match get_components descr with
         Structure_comps c ->
           let (data, pos) = Tbl.find_str s c.comp_modules in
-          let _, omty = EnvLazy.force (fun (_, md, constr) -> md, constr) data
+          let _, omty = EnvLazy.force subst_modtype_maker data
           in let (comps, _) = Tbl.find_str s c.comp_components in
           mark_module_used env s comps.loc;
           let p = Pdot(p, s, pos) in
@@ -2100,19 +2104,13 @@ let add_components ~omty slot root env0 comps =
   }
 
 let open_signature ~omty slot root env0 =
-  let comps = find_module_descr root env0 in
-  let comps = match omty with
-  | None -> get_components comps
-  | Some mty ->
-    let ocomps = !components_of_module_maker' (env0, Subst.identity, root, mty)
-    in begin match ocomps with
-      | None -> empty_structure
-      | Some c -> c
-    end
-  in match comps with
+  let maker = match omty with
+  | None -> None
+  | Some cmty -> Some (fun (_env, subst, root, _mty) ->
+    !components_of_module_maker' (env0, subst, root, cmty))
+  in match get_components ?maker (find_module_descr root env0) with
   | Functor_comps _ -> None
   | Structure_comps comps -> Some (add_components ~omty slot root env0 comps)
-
 
 (* Open a signature from a file *)
 
