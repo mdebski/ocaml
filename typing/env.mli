@@ -87,7 +87,6 @@ val is_functor_arg: Path.t -> t -> bool
 val normalize_value_path: env:t -> Path.t -> Path.t
 val normalize_module_path: env:t -> Path.t -> Path.t
 
-(* TODO mdebski: WTF? *)
 val normalize_package_path: env:t -> Path.t -> Path.t
 
 (*

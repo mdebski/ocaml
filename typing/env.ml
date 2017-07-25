@@ -1011,6 +1011,17 @@ let find_module ~alias path env =
           raise Not_found
       end
 
+let find_module_alias = find_module ~alias:true
+let find_module = find_module ~alias:false
+
+let may_find_modtype path env = try
+    (find_modtype path env).mtd_type
+  with Not_found -> None
+
+let may_find_module path env = try
+    Some (find_module path env)
+  with Not_found -> None
+
 let required_globals = ref []
 let reset_required_globals () = required_globals := []
 let get_required_globals () = !required_globals
@@ -1027,17 +1038,29 @@ let add_required_global id =
 *)
 let rec normalize_module_path ~env path =
   let path = normalize_value_path ~env path in
-  try match find_module ~alias:true path env with
+  match find_module_alias path env with
   |  {md_type=Mty_alias(_, alias_path, _)} ->
       normalize_module_path ~env alias_path
   | _ -> path
-  with Not_found -> path
+  | exception Not_found -> path
+
 and normalize_value_path ~env path = match path with
   | Pdot(p, s, _pos) -> Pdot(normalize_module_path ~env p, s, Path.nopos)
   | Papply(p1, p2) -> Papply(normalize_module_path ~env p1,
                              normalize_module_path ~env p2)
   | Pident _ -> path
 
+let rec normalize_package_path ~env path =
+  match may_find_modtype path env with
+  | Some (Mty_ident p) -> normalize_package_path ~env p
+  | _ ->
+    let path' = normalize_value_path ~env path in
+    if Path.same path' path then
+      path
+    else
+    normalize_package_path ~env path'
+
+(*
 (* for ctype, don't know what it really is *)
 let rec normalize_package_path ~env p =
   let t =
@@ -1054,9 +1077,7 @@ let rec normalize_package_path ~env p =
           if Path.same p1 p1' then p else
           normalize_package_path ~env (Path.Pdot (p1', s, n))
       | _ -> p
-
-let find_module_alias = find_module ~alias:true
-let find_module = find_module ~alias:false
+*)
 
 (* Find the manifest type associated to a type when appropriate:
    - the type should be public or should have a private row,
@@ -1574,14 +1595,6 @@ let add_gadt_instance_chain env lv t =
   (* Format.eprintf "@." *)
 
 (* Expand manifest module type names at the top of the given module type *)
-
-let may_find_modtype path env = try
-    (find_modtype path env).mtd_type
-  with Not_found -> None
-
-let may_find_module path env = try
-    Some (find_module path env)
-  with Not_found -> None
 
 let rec scrape_alias env ?(strengthened=true) ?path mty =
   match mty, path, strengthened with
