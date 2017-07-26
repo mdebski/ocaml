@@ -1079,3 +1079,36 @@ module P : sig type t = int val a : t end
 Line _, characters 8-11:
 Error: Unbound value P.b
 |}]
+
+module O = struct
+ let a = 1
+ let b = 2
+end
+
+module M = struct
+  module N = O
+end
+
+module P = struct
+  include M
+end
+
+module Q = P.N
+
+module F(X:AB) = X
+
+module L = F(Q)
+
+let _ = L.a
+let _ = L.b
+
+[%%expect {|
+module O : sig val a : int val b : int end
+module M : sig module N = O end
+module P : sig module N = O end
+module Q = P.N
+module F : functor (X : AB) -> sig val a : int val b : int end
+module L : sig val a : int val b : int end
+- : int = 1
+- : int = 2
+|}]
