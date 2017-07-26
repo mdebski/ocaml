@@ -279,7 +279,7 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
           | Mta_absent -> Tcoerce_none
           | Mta_present ->
             let inner_cc = try
-              realize_alias ~loc ~env pres1 p1 omty1
+              make_alias_coercion ~loc ~env pres1 p1 omty1
             with Error _ ->
               let norm_path = Env.normalize_module_path ~env p1 in
               raise (Error[cxt, env, Unbound_module_path norm_path])
@@ -290,7 +290,7 @@ and try_modtypes ~loc env cxt subst mty1 mty2 =
       let mty1 = Env.scrape_alias env mty1 in
       let cc = modtypes ~loc env cxt subst mty1 mty2 in
       let inner_cc = try
-        realize_alias ~loc ~env pres1 p1 omty1
+        make_alias_coercion ~loc ~env pres1 p1 omty1
       with Error _ ->
         let norm_path = Env.normalize_module_path ~env p1 in
         raise (Error[cxt, env, Unbound_module_path norm_path])
@@ -504,10 +504,11 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
 
 (* realize path *)
 
-and realize_module_path_with_coercion ~loc ~env path =
+and realize_module_path_with_coercion ?(stop_on_present=true) ~loc ~env path =
   match (Env.find_module_alias path env).md_type with
-  | Mty_alias(Mta_absent, alias_path, omty) ->
-    realize_absent_alias ~loc ~env alias_path omty
+  | Mty_alias(pres, alias_path, omty)
+      when pres == Mta_absent || not stop_on_present ->
+    realize_alias ~loc ~env alias_path omty
   | _ ->
     realize_value_path_with_coercion ~loc ~env path
   | exception Not_found ->
@@ -522,7 +523,7 @@ and realize_value_path_with_coercion ~loc ~env path =
     let ppath, cc, subst = realize_module_path_with_coercion ~loc ~env ppath
     in coerce_position ~cc ~subst (ppath, s, pos)
 
-and realize_absent_alias ~loc ~env path omty =
+and realize_alias ~loc ~env path omty =
   let path, inner_cc, subst = realize_module_path_with_coercion ~loc ~env path
   in let mty = try
       (Env.find_module_alias path env).md_type
@@ -532,11 +533,11 @@ and realize_absent_alias ~loc ~env path omty =
   in let cc = realize_get_coercion ~loc ~env mty omty path
   in path, (compose_coercions cc inner_cc), subst
 
-and realize_alias ~loc ~env pres path omty =
+and make_alias_coercion ~loc ~env pres path omty =
   match pres with
   | Mta_present -> Tcoerce_none
   | Mta_absent ->
-    let path, cc, _ = realize_absent_alias ~loc ~env path omty in
+    let path, cc, _ = realize_alias ~loc ~env path omty in
     Tcoerce_alias(path, cc)
 
 and realize_get_coercion ~loc ~env mty omty path = match omty with
