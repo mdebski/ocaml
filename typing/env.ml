@@ -1061,25 +1061,6 @@ let rec normalize_package_path ~env path =
     else
     normalize_package_path ~env path'
 
-(*
-(* for ctype, don't know what it really is *)
-let rec normalize_package_path ~env p =
-  let t =
-    try (find_modtype p env).mtd_type
-    with Not_found -> None
-  in
-  match t with
-  | Some (Mty_ident p) -> normalize_package_path ~env p
-  | Some (Mty_signature _ | Mty_functor _ | Mty_alias _) | None ->
-      match p with
-        Path.Pdot (p1, s, n) ->
-          (* For module aliases *)
-          let p1' = normalize_module_path ~env p1 in
-          if Path.same p1 p1' then p else
-          normalize_package_path ~env (Path.Pdot (p1', s, n))
-      | _ -> p
-*)
-
 (* Find the manifest type associated to a type when appropriate:
    - the type should be public or should have a private row,
    - the type should have an associated manifest type. *)
