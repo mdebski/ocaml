@@ -1108,7 +1108,7 @@ let rec type_module ?(alias=false) sttn funct_body anchor env smod =
           mod_desc = base_desc; mod_type = base_type; mod_env = env;
           mod_attributes = smod.pmod_attributes; mod_loc = loc
         }
-      end else begin match (Env.find_module path env).md_type with
+      end else begin match Env.find_module_type path env with
       | Mty_alias(_, p1, _) as mty when not alias ->
           let p1', cc = Includemod.realize_module_path_with_coercion
                           ~stop_on_present:false ~loc ~env p1

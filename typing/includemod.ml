@@ -505,7 +505,7 @@ and check_modtype_equiv ~loc env cxt mty1 mty2 =
 (* realize path *)
 
 and realize_module_path_with_coercion ?(stop_on_present=true) ~loc ~env path =
-  match (Env.find_module_type_alias path env).md_type with
+  match Env.find_module_type_alias path env with
   | Mty_alias(pres, alias_path, omty)
       when pres == Mta_absent || not stop_on_present ->
     realize_alias ~loc ~env alias_path omty

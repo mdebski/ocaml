@@ -1016,22 +1016,21 @@ let find_module ~alias path env =
           raise Not_found
       end
 
-let find_module_alias = find_module ~alias:true
+let find_module_type ~alias path env =
+  let md, omty = find_module ~alias path env in
+  match omty with
+    | None -> md.md_type
+    | Some mty -> Mty_alias(Mta_absent, path, Some mty)
+
 let find_module = find_module ~alias:false
 
 let may_find_modtype path env = try
     (find_modtype path env).mtd_type
   with Not_found -> None
 
-let may_find_module path env = try
-    Some (find_module path env)
+let may_find_module_type path env = try
+    Some (find_module_type ~alias:false path env)
   with Not_found -> None
-
-let find_module_type ~alias path env =
-  let md, omty = find_module ~alias path env in
-  match omty with
-    | None -> md.md_type
-    | Some mty -> Mty_alias(Mta_absent, path, Some mty)
 
 let required_globals = ref []
 let reset_required_globals () = required_globals := []
@@ -1073,6 +1072,9 @@ let rec normalize_package_path ~env path =
       path
     else
     normalize_package_path ~env path'
+
+let find_module_type_alias = find_module_type ~alias:true
+let find_module_type = find_module_type ~alias:false
 
 (* Find the manifest type associated to a type when appropriate:
    - the type should be public or should have a private row,
@@ -1606,7 +1608,7 @@ let rec scrape_ident env mty = match mty with
 let rec scrape_only_alias env ?(strengthened=true) ?path mty =
   match mty, path, strengthened with
   | Mty_alias(_, alias_path, None), _, _ -> begin
-      match may_find_module alias_path env with
+      match may_find_module_type alias_path env with
         | Some md_type ->
           scrape_only_alias ~strengthened env md_type ~path:alias_path
         | None -> mty
