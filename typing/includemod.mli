@@ -74,4 +74,4 @@ val expand_module_alias: Env.t -> pos list -> Path.t -> Types.module_type
 *)
 
 val realize_module_path_with_coercion : ?stop_on_present:bool ->
-  loc:Location.t -> env:Env.t -> Path.t -> Path.t * module_coercion * Subst.t
+  loc:Location.t -> env:Env.t -> Path.t -> Path.t * module_coercion

@@ -1071,41 +1071,43 @@ let wrap_constraint env arg mty explicit =
 
 let rec type_module ?(alias=false) sttn funct_body anchor env smod =
   match smod.pmod_desc with
-    Pmod_ident lid ->
+  | Pmod_ident lid ->
       let path =
         Typetexp.lookup_module ~load:(not alias) env smod.pmod_loc lid.txt in
-      let md = { mod_desc = Tmod_ident (path, lid);
-                 mod_type = Mty_alias(Mta_absent, path, None);
-                 mod_env = env;
-                 mod_attributes = smod.pmod_attributes;
-                 mod_loc = smod.pmod_loc } in
+      let base_desc = Tmod_ident (path, lid) in
+      let base_type = Mty_alias(Mta_absent, path, None) in
+      let loc = smod.pmod_loc in
       let aliasable = not (Env.is_functor_arg path env) in
-      let md =
-        if alias && aliasable then
-          (Env.add_required_global (Path.head path); md)
-        else match (Env.find_module path env).md_type with
-        | Mty_alias(_, p1, omty) when not alias ->
-          (* TODO mdebski: add tests for this path *)
-          (* TODO mdebski: use scrape_alias here? *)
-            let p1, _, _ = Includemod.realize_module_path_with_coercion ~loc:smod.pmod_loc ~env p1 in
-            let mty, aliasable = match omty with
-              | None -> Includemod.expand_module_alias env [] p1, `Aliasable
-              | Some cmty -> cmty, `Aliasable_with_constraints
-            in
-            { md with
-              mod_desc = Tmod_constraint (md, mty, Tmodtype_implicit,
-                                          Tcoerce_alias (p1, Tcoerce_none));
-              mod_type =
-                if sttn then Mtype.strengthen ~aliasable env mty p1
-                else mty }
-        | mty ->
-            let aliasable = if aliasable then `Aliasable else `Not_aliasable in
-            let mty =
-              if sttn then Mtype.strengthen ~aliasable env mty path
-              else mty
-            in
-            { md with mod_type = mty }
-      in rm md
+      if alias && aliasable then begin
+        Env.add_required_global (Path.head path);
+        rm {
+          mod_desc = base_desc; mod_type = base_type; mod_env = env;
+          mod_attributes = smod.pmod_attributes; mod_loc = loc
+        }
+      end else begin match (Env.find_module path env).md_type with
+      | Mty_alias(_, p1, _) as mty when not alias ->
+          let p1', cc = Includemod.realize_module_path_with_coercion
+                          ~stop_on_present:false ~loc ~env p1
+          in let cc = Tcoerce_alias(p1', cc)
+          in let mty = Env.scrape_only_alias ~strengthened:sttn env mty
+          in rm {
+            mod_desc = Tmod_constraint({
+              mod_desc = base_desc; mod_type = base_type; mod_env = env;
+              mod_attributes = smod.pmod_attributes; mod_loc = loc
+            }, mty, Tmodtype_implicit, cc);
+            mod_type = mty;
+            mod_env = env; mod_attributes = smod.pmod_attributes; mod_loc = loc
+          }
+      | mty ->
+          let aliasable = if aliasable then `Aliasable else `Not_aliasable in
+          let mty =
+            if sttn then Mtype.strengthen ~aliasable env mty path else mty
+          in
+          rm {
+            mod_desc = base_desc; mod_type = mty; mod_env = env;
+            mod_attributes = smod.pmod_attributes; mod_loc = loc
+          }
+      end
   | Pmod_structure sstr ->
       let (str, sg, _finalenv) =
         type_structure funct_body anchor env sstr smod.pmod_loc in

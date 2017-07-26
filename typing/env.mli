@@ -330,6 +330,7 @@ val fold_cltypes:
 
 (** Utilities *)
 val scrape_alias: ?strengthened:bool -> t -> module_type -> module_type
+val scrape_only_alias: ?strengthened:bool -> t -> module_type -> module_type
 val check_value_name: string -> Location.t -> unit
 
 module Persistent_signature : sig

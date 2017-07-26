@@ -314,10 +314,8 @@ let rec transl_module cc rootpath mexp =
   | _ ->
       match mexp.mod_desc with
       | Tmod_ident (path,_) ->
-          (* TODO mdebski: subst?? *)
-          let path, inner_cc, _subst =
-            Includemod.realize_module_path_with_coercion ~loc ~env:mexp.mod_env
-              path
+          let path, inner_cc = Includemod.realize_module_path_with_coercion
+                               ~loc ~env:mexp.mod_env path
           in let cc = Includemod.compose_coercions cc inner_cc in
           apply_coercion loc Strict cc (transl_normal_path path)
       | Tmod_structure str ->

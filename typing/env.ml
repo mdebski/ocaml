@@ -1577,17 +1577,20 @@ let add_gadt_instance_chain env lv t =
 
 (* Expand manifest module type names at the top of the given module type *)
 
-let rec scrape_alias env ?(strengthened=true) ?path mty =
+let rec scrape_ident env mty = match mty with
+  | Mty_ident p -> begin
+      match may_find_modtype p env with
+        | Some found_mty -> scrape_ident env found_mty
+        | None -> mty
+      end
+  | _ -> mty
+
+let rec scrape_only_alias env ?(strengthened=true) ?path mty =
   match mty, path, strengthened with
-  | Mty_ident p, _, _ ->
-    begin match may_find_modtype p env with
-    | Some found_mty -> scrape_alias ~strengthened env found_mty ?path
-    | None -> mty
-    end
   | Mty_alias(_, alias_path, None), _, _ -> begin
       match may_find_module alias_path env with
         | Some { md_type } ->
-          scrape_alias ~strengthened env md_type ~path:alias_path
+          scrape_only_alias ~strengthened env md_type ~path:alias_path
         | None -> mty
       end
   | Mty_alias(_, alias_path, Some cmty), _, true ->
@@ -1599,8 +1602,11 @@ let rec scrape_alias env ?(strengthened=true) ?path mty =
   | _ -> mty
 ;;
 
-(* Hide optional path argument *)
-let scrape_alias ?strengthened env mty = scrape_alias ?strengthened env mty
+(* Hide optional argument, add utility function *)
+let scrape_only_alias ?strengthened env mty =
+  scrape_only_alias ?strengthened env mty
+let scrape_alias ?strengthened env mty = scrape_ident env
+      (scrape_only_alias ?strengthened env mty)
 
 (* Given a signature and a root path, prefix all idents in the signature
    by the root path and build the corresponding substitution. *)

@@ -533,13 +533,6 @@ and realize_alias ~loc ~env path omty =
   in let cc = realize_get_coercion ~loc ~env mty omty path
   in path, (compose_coercions cc inner_cc), subst
 
-and make_alias_coercion ~loc ~env pres path omty =
-  match pres with
-  | Mta_present -> Tcoerce_none
-  | Mta_absent ->
-    let path, cc, _ = realize_alias ~loc ~env path omty in
-    Tcoerce_alias(path, cc)
-
 and realize_get_coercion ~loc ~env mty omty path = match omty with
   | None -> Tcoerce_none
   | Some cmty ->
@@ -554,11 +547,42 @@ and coerce_position ~cc ~subst (path, name, pos) = match cc with
     let subst = List.fold_left (fun acc (ident, pos, _cc) ->
         Subst.add_module ident (Pdot(path, Ident.name ident, pos)) acc
     ) subst id_poslist in
-    Pdot(path, name, pos), inner_cc, subst
+    Pdot(path, name, pos), substitute_coercion ~subst inner_cc, subst
   | Tcoerce_alias (alias_path, inner_cc) ->
     let alias_path = Subst.module_path subst alias_path in
     coerce_position ~cc:inner_cc ~subst (alias_path, name, pos)
   | _ -> assert false
+
+and substitute_coercion ~(subst:Subst.t) (cc : module_coercion) :
+  module_coercion =
+  match cc with
+  | Tcoerce_none -> cc
+  | Tcoerce_alias (alias_path, inner_cc) ->
+    let alias_path = Subst.module_path subst alias_path
+    in let inner_cc = substitute_coercion ~subst inner_cc
+    in Tcoerce_alias (alias_path, inner_cc)
+  | Tcoerce_structure (ps, id_poslist) ->
+    let ps = List.map (
+      fun (i, cc) -> (i, substitute_coercion ~subst cc)
+    ) ps
+    in let id_poslist = List.map (
+      fun (id, i, cc) -> (id, i, substitute_coercion ~subst cc)
+    ) id_poslist
+    in Tcoerce_structure (ps, id_poslist)
+  | _ -> assert false
+
+and make_alias_coercion ~loc ~env pres path omty =
+  match pres with
+  | Mta_present -> Tcoerce_none
+  | Mta_absent ->
+    let path, cc, _ = realize_alias ~loc ~env path omty in
+    Tcoerce_alias(path, cc)
+
+let realize_module_path_with_coercion ?(stop_on_present=true) ~loc ~env path =
+  (* We apply subst as we build the coercion, it's not needed anymore *)
+  let path, cc, _subst = realize_module_path_with_coercion ~stop_on_present
+                           ~loc ~env path
+  in path, cc
 
 (* Simplified inclusion check between module types (for Env) *)
 
