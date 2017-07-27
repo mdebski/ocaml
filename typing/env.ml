@@ -596,8 +596,9 @@ let components_of_module' =
        Path.t -> module_type ->
        module_components)
 let components_of_module_maker' =
-  ref ((fun (_env, _sub, _path, _mty) -> assert false) :
-          t * Subst.t * Path.t * module_type -> module_components_repr option)
+  ref ((fun ?add_constraints:_ (_env, _sub, _path, _mty) -> assert false) :
+         ?add_constraints:bool -> t * Subst.t * Path.t * module_type ->
+       module_components_repr option)
 let components_of_functor_appl' =
   ref ((fun _f _env _p1 _p2 -> assert false) :
           functor_components -> t -> Path.t -> Path.t -> module_components)
@@ -1702,7 +1703,7 @@ let rec components_of_module ~deprecated ~loc env sub path mty =
     comps = EnvLazy.create (env, sub, path, mty)
   }
 
-and components_of_module_maker (env, sub, path, mty) =
+and components_of_module_maker ?(add_constraints=false) (env, sub, path, mty) =
   match scrape_alias env mty with
     Mty_signature sg ->
       let c =
@@ -1752,7 +1753,8 @@ and components_of_module_maker (env, sub, path, mty) =
               add_to_tbl (Ident.name id) descr c.comp_constrs;
             incr pos
         | Sig_module(id, md, _) ->
-            let md' = EnvLazy.create (sub, md, Some md.md_type) in
+            let constr = if add_constraints then Some md.md_type else None in
+            let md' = EnvLazy.create (sub, md, constr) in
             c.comp_modules <-
               Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
             let deprecated =
@@ -2104,7 +2106,8 @@ let open_signature ~omty slot root env0 =
     | None ->
       get_components (find_module_descr root env0)
     | Some cmty -> begin
-      match !components_of_module_maker' (env0, Subst.identity, root, cmty) with
+      match !components_of_module_maker' ~add_constraints:true
+              (env0, Subst.identity, root, cmty) with
       | None -> empty_structure
       | Some c -> c
     end
@@ -2115,7 +2118,8 @@ let open_signature ~omty slot root env0 =
 (* Open a signature from a file *)
 
 let open_pers_signature name env =
-  match open_signature ~omty:None None (Pident(Ident.create_persistent name)) env with
+  match open_signature ~omty:None None (Pident(Ident.create_persistent name))
+          env with
   | Some env -> env
   | None -> assert false (* a compilation unit cannot refer to a functor *)
 
