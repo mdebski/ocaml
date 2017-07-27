@@ -616,16 +616,12 @@ let realize_value_path = ref ((fun ~loc:_ ~env:_ _ -> assert false) :
 let md md_type =
   {md_type; md_attributes=[]; md_loc=Location.none}
 
-let get_components_opt ?maker c =
-  let maker = match maker with
-    | None -> !components_of_module_maker'
-    | Some maker -> maker
-  in
+let get_components_opt c =
   match !can_load_cmis with
   | Can_load_cmis ->
-    EnvLazy.force maker c.comps
+    EnvLazy.force !components_of_module_maker' c.comps
   | Cannot_load_cmis log ->
-    EnvLazy.force_logged log maker c.comps
+    EnvLazy.force_logged log !components_of_module_maker' c.comps
 
 let empty_structure =
   Structure_comps {
@@ -637,8 +633,8 @@ let empty_structure =
     comp_components = Tbl.empty; comp_classes = Tbl.empty;
     comp_cltypes = Tbl.empty }
 
-let get_components ?maker c =
-  match get_components_opt ?maker c with
+let get_components c =
+  match get_components_opt c with
   | None -> empty_structure
   | Some c -> c
 
