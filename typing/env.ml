@@ -1153,10 +1153,8 @@ let rec lookup_module_descr_aux ?loc lid env =
       end
   | Lapply(l1, l2) ->
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let (p2, omty2) = lookup_module ~load:true ?loc l2 env in
-      let mty2 = match omty2 with
-        | None -> find_module_type p2 env
-        | Some mty2 -> mty2
+      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = find_module_type p2 env
       in begin match get_components desc1 with
         Functor_comps f ->
           let loc = match loc with Some l -> l | None -> Location.none in
@@ -1220,10 +1218,8 @@ and lookup_module ~load ?loc lid env : Path.t * module_type option =
       end
   | Lapply(l1, l2) ->
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let (p2, omty2) = lookup_module ~load:true ?loc l2 env in
-      let mty2 = match omty2 with
-        | None -> find_module_type p2 env
-        | Some mty2 -> mty2
+      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = find_module_type p2 env
       in let p = Papply(p1, p2) in
       begin match get_components desc1 with
         Functor_comps f ->
