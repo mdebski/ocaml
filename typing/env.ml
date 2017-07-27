@@ -2102,11 +2102,16 @@ let add_components ~omty slot root env0 comps =
   }
 
 let open_signature ~omty slot root env0 =
-  let maker = match omty with
-  | None -> None
-  | Some cmty -> Some (fun (_env, subst, root, _mty) ->
-    !components_of_module_maker' (env0, subst, root, cmty))
-  in match get_components ?maker (find_module_descr root env0) with
+  let comps =
+    match omty with
+    | None ->
+      get_components (find_module_descr root env0)
+    | Some cmty -> begin
+      match !components_of_module_maker' (env0, Subst.identity, root, cmty) with
+      | None -> empty_structure
+      | Some c -> c
+    end
+  in match comps with
   | Functor_comps _ -> None
   | Structure_comps comps -> Some (add_components ~omty slot root env0 comps)
 
