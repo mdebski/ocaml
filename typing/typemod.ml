@@ -198,11 +198,8 @@ let merge_constraint initial_env loc sg constr =
         update_rec_next rs rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_module (_, lid'))
       when Ident.name id = s ->
-        let path, md', omty = Typetexp.find_module initial_env loc lid'.txt in
-        let mty = match omty with
-          | None -> md'.md_type
-          | Some mty -> Mty_alias(Mta_absent, path, Some mty)
-        in
+        let path, md', _omty = Typetexp.find_module initial_env loc lid'.txt in
+        let mty = Env.find_module_type path env in
         let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
         let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
@@ -211,11 +208,8 @@ let merge_constraint initial_env loc sg constr =
         Sig_module(id, newmd, rs) :: rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_modsubst (_, lid'))
       when Ident.name id = s ->
-        let path, md', omty = Typetexp.find_module initial_env loc lid'.txt in
-        let mty = match omty with
-          | None -> md'.md_type
-          | Some mty -> Mty_alias(Mta_absent, path, Some mty)
-        in
+        let path, md', _omty = Typetexp.find_module initial_env loc lid'.txt in
+        let mty = Env.find_module_type path env in
         let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
         let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
