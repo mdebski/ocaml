@@ -114,3 +114,72 @@ module M : sig type t = A | B val v : t val v2 : t list end
 - : int = 1
 - : int = 1
 |}]
+
+module O = struct
+  module M = struct
+    module N = struct
+      let a = 1
+      let b = 2
+      let c = 3
+    end
+  end
+end
+
+module M = struct end
+module N = struct end
+
+let a = ()
+let b = ()
+let c = ()
+
+module F (X: A) = struct type t end
+
+let _ = let open O in
+  let open (M <: MAB) in
+  let module P = N in
+  let _f (x : F(P).t) : F(M.N).t = x in
+  let _f (x : F(P).t) : F(N).t = x in
+  let open (N <: A) in (a, N.a, N.b, M.N.b, M.N.c)
+
+let _ = O.((M <: MAB).((N <: A).(a, N.a, N.b, M.N.b, M.N.c)))
+
+[%%expect {|
+module O :
+  sig
+    module M : sig module N : sig val a : int val b : int val c : int end end
+  end
+module M : sig  end
+module N : sig  end
+val a : unit = ()
+val b : unit = ()
+val c : unit = ()
+module F : functor (X : A) -> sig type t end
+- : int * int * int * int * int = (1, 1, 2, 2, 3)
+- : int * int * int * int * int = (1, 1, 2, 2, 3)
+|}]
+
+let _ = let open O in
+let open (M <: MAB) in
+let open (N <: A) in b
+
+[%%expect {|
+- : unit = ()
+|}]
+
+let _ = let open O in
+let open (M <: MAB) in
+let open (N <: A) in N.c
+
+[%%expect {|
+Line _, characters 21-24:
+Error: Unbound value N.c
+|}]
+
+let _ = let open O in
+let open (M <: MAB) in
+let module P = N in
+P.c
+[%%expect {|
+Line _, characters 0-3:
+Error: Unbound value P.c
+|}]
