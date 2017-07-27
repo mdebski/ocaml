@@ -210,7 +210,7 @@ let merge_constraint initial_env loc sg constr =
       when Ident.name id = s ->
         let path, md', _omty = Typetexp.find_module initial_env loc lid'.txt in
         let mty = Env.find_module_type path env in
-        let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
+        let md'' = {md' with md_type = mty} in
         let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
