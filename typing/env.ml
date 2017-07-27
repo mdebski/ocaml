@@ -1755,11 +1755,7 @@ and components_of_module_maker (env, sub, path, mty) =
               add_to_tbl (Ident.name id) descr c.comp_constrs;
             incr pos
         | Sig_module(id, md, _) ->
-            let omty = match md.md_type with
-              | Mty_alias(_, _, omty) -> omty
-              | _ -> None
-            in
-            let md' = EnvLazy.create (sub, md, omty) in
+            let md' = EnvLazy.create (sub, md, None) in
             c.comp_modules <-
               Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
             let deprecated =
@@ -1771,7 +1767,7 @@ and components_of_module_maker (env, sub, path, mty) =
             in
             c.comp_components <-
               Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
-            env := store_module ~check:false ~omty id md !env;
+            env := store_module ~check:false ~omty:None id md !env;
             incr pos
         | Sig_modtype(id, decl) ->
             let decl' = Subst.modtype_declaration sub decl in
