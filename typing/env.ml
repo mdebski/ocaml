@@ -1016,7 +1016,7 @@ let find_module_type ~alias path env =
   let md, omty = find_module ~alias path env in
   match omty with
     | None -> md.md_type
-    | Some mty -> Mty_alias(Mta_absent, path, Some mty)
+    | Some mty -> mty
 
 let find_module = find_module ~alias:false
 
@@ -1751,7 +1751,7 @@ and components_of_module_maker (env, sub, path, mty) =
               add_to_tbl (Ident.name id) descr c.comp_constrs;
             incr pos
         | Sig_module(id, md, _) ->
-            let md' = EnvLazy.create (sub, md, None) in
+            let md' = EnvLazy.create (sub, md, Some md.md_type) in
             c.comp_modules <-
               Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
             let deprecated =
