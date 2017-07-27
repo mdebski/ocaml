@@ -531,7 +531,8 @@ let check_shadowing env = function
 
 let subst_modtype_maker (subst, md, omty) =
   if subst == Subst.identity then md, omty
-  else {md with md_type = Subst.modtype subst md.md_type}, omty
+  else {md with md_type = Subst.modtype subst md.md_type},
+       Misc.may_map (Subst.modtype subst) omty
 
 let empty = {
   values = IdTbl.empty; constrs = TycompTbl.empty;
@@ -1763,7 +1764,7 @@ and components_of_module_maker (env, sub, path, mty) =
             in
             c.comp_components <-
               Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
-            env := store_module ~check:false ~omty:None id md !env;
+            env := store_module ~check:false id md !env;
             incr pos
         | Sig_modtype(id, decl) ->
             let decl' = Subst.modtype_declaration sub decl in
@@ -1911,7 +1912,7 @@ and store_extension ~check id ext env =
                 env.constrs;
     summary = Env_extension(env.summary, id, ext) }
 
-and store_module ~check ~omty id md env =
+and store_module ~check id md env =
   let loc = md.md_loc in
   if check then
     check_usage loc id (fun s -> Warnings.Unused_module s)
@@ -1919,7 +1920,7 @@ and store_module ~check ~omty id md env =
 
   let deprecated = Builtin_attributes.deprecated_of_attrs md.md_attributes in
   { env with
-    modules = IdTbl.add id (EnvLazy.create (Subst.identity, md, omty))
+    modules = IdTbl.add id (EnvLazy.create (Subst.identity, md, None))
                 env.modules;
     components =
       IdTbl.add id
@@ -1982,7 +1983,7 @@ and add_extension ~check id ext env =
   store_extension ~check id ext env
 
 and add_module_declaration ?(arg=false) ~check id md env =
-  let env = store_module ~omty:None ~check id md env in
+  let env = store_module ~check id md env in
   if arg then add_functor_arg id env else env
 
 and add_modtype id info env =
