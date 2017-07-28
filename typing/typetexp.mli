@@ -102,7 +102,7 @@ val find_class:
     Env.t -> Location.t -> Longident.t -> Path.t * class_declaration
 val find_module:
     Env.t -> Location.t -> Longident.t ->
-    Path.t * module_declaration * module_type option
+    Path.t * module_declaration
 val find_module_type:
     Env.t -> Location.t -> Longident.t -> Path.t * module_type
 val lookup_module:

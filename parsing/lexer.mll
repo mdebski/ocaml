@@ -476,7 +476,6 @@ rule token = parse
   | "<"  { LESS }
   | "<:" { LESSCOLON }
   | "<-" { LESSMINUS }
-  | "<:" { LESSCOLON }
   | "="  { EQUAL }
   | "["  { LBRACKET }
   | "[|" { LBRACKETBAR }

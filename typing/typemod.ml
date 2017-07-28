@@ -198,9 +198,8 @@ let merge_constraint initial_env loc sg constr =
         update_rec_next rs rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_module (_, lid'))
       when Ident.name id = s ->
-        let path, md', _omty = Typetexp.find_module initial_env loc lid'.txt in
-        let mty = Env.find_module_type path env in
-        let md'' = {md' with md_type = Mtype.remove_aliases env mty} in
+        let path, md' = Typetexp.find_module initial_env loc lid'.txt in
+        let md'' = {md' with md_type = Mtype.remove_aliases env md'.md_type} in
         let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
                       path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
@@ -208,10 +207,8 @@ let merge_constraint initial_env loc sg constr =
         Sig_module(id, newmd, rs) :: rem
     | (Sig_module(id, md, rs) :: rem, [s], Pwith_modsubst (_, lid'))
       when Ident.name id = s ->
-        let path, md', _omty = Typetexp.find_module initial_env loc lid'.txt in
-        let mty = Env.find_module_type path env in
-        let md'' = {md' with md_type = mty} in
-        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md''
+        let path, md' = Typetexp.find_module initial_env loc lid'.txt in
+        let newmd = Mtype.strengthen_decl ~aliasable:`Not_aliasable env md'
                       path in
         ignore(Includemod.modtypes ~loc env newmd.md_type md.md_type);
         real_id := Some id;
@@ -259,9 +256,11 @@ let merge_constraint initial_env loc sg constr =
     | [_], Pwith_modsubst (_, lid) ->
         let id =
           match !real_id with None -> assert false | Some id -> id in
-        let path, _ = Typetexp.lookup_module initial_env loc lid.txt in
-        let sub = Subst.add_module id path Subst.identity in
-        Subst.signature sub sg
+        let path, omty = Typetexp.lookup_module initial_env loc lid.txt in
+        match omty with
+        | None -> let sub = Subst.add_module id path Subst.identity in
+          Subst.signature sub sg
+        | Some _ -> failwith "Not implemented yet."
     | _ ->
           sg
     in

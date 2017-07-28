@@ -63,7 +63,7 @@ val without_cmis: ('a -> 'b) -> 'a -> 'b
 val find_value: Path.t -> t -> value_description
 val find_type: Path.t -> t -> type_declaration
 val find_type_descrs: Path.t -> t -> type_descriptions
-val find_module: Path.t -> t -> module_declaration * module_type option
+val find_module: Path.t -> t -> module_declaration
 val find_module_type: Path.t -> t -> module_type
 val find_module_type_alias: Path.t -> t -> module_type
 val find_modtype: Path.t -> t -> modtype_declaration

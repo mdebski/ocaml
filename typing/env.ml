@@ -973,7 +973,7 @@ let find_type_descrs p env =
   snd (find_type_full p env)
 
 let find_module ~alias path env =
-  match path with
+  let path, omty = match path with
     Pident id ->
       begin try
         let data = IdTbl.find_same id env.modules in
@@ -1013,12 +1013,13 @@ let find_module ~alias path env =
       | Structure_comps _ ->
           raise Not_found
       end
+  in
+  match omty with
+  | None -> path
+  | Some _ -> assert false
 
 let find_module_type ~alias path env =
-  let md, omty = find_module ~alias path env in
-  match omty with
-    | None -> md.md_type
-    | Some mty -> mty
+  (find_module ~alias path env).md_type
 
 let find_module = find_module ~alias:false
 
@@ -1153,8 +1154,10 @@ let rec lookup_module_descr_aux ?loc lid env =
       end
   | Lapply(l1, l2) ->
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
-      let mty2 = find_module_type p2 env
+      let (p2, omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = match omty2 with
+        | None -> find_module_type p2 env
+        | Some mty2 -> mty2
       in begin match get_components desc1 with
         Functor_comps f ->
           let loc = match loc with Some l -> l | None -> Location.none in
@@ -1218,8 +1221,10 @@ and lookup_module ~load ?loc lid env : Path.t * module_type option =
       end
   | Lapply(l1, l2) ->
       let (p1, desc1) = lookup_module_descr ?loc l1 env in
-      let (p2, _omty2) = lookup_module ~load:true ?loc l2 env in
-      let mty2 = find_module_type p2 env
+      let (p2, omty2) = lookup_module ~load:true ?loc l2 env in
+      let mty2 = match omty2 with
+        | Some mty2 -> mty2
+        | None -> find_module_type p2 env
       in let p = Papply(p1, p2) in
       begin match get_components desc1 with
         Functor_comps f ->
