@@ -257,10 +257,11 @@ let merge_constraint initial_env loc sg constr =
         let id =
           match !real_id with None -> assert false | Some id -> id in
         let path, omty = Typetexp.lookup_module initial_env loc lid.txt in
-        match omty with
-        | None -> let sub = Subst.add_module id path Subst.identity in
-          Subst.signature sub sg
-        | Some _ -> failwith "Not implemented yet."
+        begin match omty with
+          | None -> let sub = Subst.add_module id path Subst.identity in
+            Subst.signature sub sg
+          | Some _ -> failwith "Not implemented yet."
+        end
     | _ ->
           sg
     in
@@ -339,8 +340,27 @@ and approx_module_declaration env pmd =
     md_loc = pmd.pmd_loc;
   }
 
-(* TODO mdebski *)
-and approx_type_open _env _sod = failwith "NIY."
+and approx_type_open env {popen_loc = loc; popen_expr = oexpr;
+                          popen_override = ovf; _ } =
+  let lid, omty = match oexpr with
+    | Popen_lid lid -> lid, None
+    | Popen_tconstraint(lid, smty) ->
+      let mty = approx_modtype env smty in
+      lid, Some mty
+  in
+  let path, old_omty = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
+  begin match old_omty, omty with
+  | Some old_mty, Some mty -> ignore (Includemod.modtypes ~loc env old_mty mty)
+  | None, Some mty -> let real_mty = Env.find_module_type_alias path env in
+    ignore(Includemod.modtypes ~loc env real_mty mty)
+  | _ -> ()
+  end;
+  match Env.open_signature ~loc ~omty ovf path env with
+  | Some env -> env
+  | None ->
+      let mty = Env.find_module_type path env in
+      ignore (extract_sig_open env lid.loc mty);
+      assert false
 
 and approx_sig env ssg =
   match ssg with
@@ -378,8 +398,8 @@ and approx_sig env ssg =
           let (id, newenv) = Env.enter_modtype d.pmtd_name.txt info env in
           Sig_modtype(id, info) :: approx_sig newenv srem
       | Psig_open sod ->
-          let (_path, mty, _od) = approx_type_open env sod in
-          approx_sig mty srem
+          let env = approx_type_open env sod in
+          approx_sig env srem
       | Psig_include sincl ->
           let smty = sincl.pincl_mod in
           let mty = approx_modtype env smty in
