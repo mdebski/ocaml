@@ -183,3 +183,19 @@ P.c
 Line _, characters 0-3:
 Error: Unbound value P.c
 |}]
+
+module XYZ = struct let f x = x end
+module rec R :
+sig
+  open O
+  module XYZ : sig val f : 'a -> 'a end
+end = struct
+  module XYZ = XYZ
+end;;
+let _ = R.XYZ.f "abc"
+
+[%%expect{|
+module XYZ : sig val f : 'a -> 'a end
+module rec R : sig module XYZ : sig val f : 'a -> 'a end end
+- : string = "abc"
+|}]

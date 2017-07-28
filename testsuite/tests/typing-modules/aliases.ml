@@ -941,8 +941,8 @@ module M : AB = struct
 end
 
 module N = M
-module O = (N <: A)
-module P = O
+module NP = (N <: A)
+module P = NP
 
 let _ : M.t = P.a
 let _ = P.b
@@ -950,8 +950,8 @@ let _ = P.b
 [%%expect {|
 module M : AB
 module N = M
-module O <: A = N
-module P = O
+module NP <: A = N
+module P = NP
 - : P.t = <abstr>
 Line _, characters 8-11:
 Error: Unbound value P.b
